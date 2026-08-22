@@ -1,0 +1,488 @@
+{% extends "base.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dialog.css') }}">
+<style>
+  .ti-toolbar-btns .dlg-btn { min-width: 62px; }
+  table.dlg-table tbody tr[data-print-url] { cursor: pointer; }
+  .ti-modal-window { width: 980px; }
+  .ti-top-row { display: flex; gap: 18px; align-items: flex-end; margin-bottom: 12px; }
+  .ti-top-row .pv-field { margin-bottom: 0; }
+  .ti-top-row .pv-field input { width: 140px; }
+  .ti-top-row #ti-chassis-readonly input { width: 100%; min-width: 220px; }
+  .ti-panels { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .ti-col { flex: 1; min-width: 360px; }
+  .ti-section-title {
+    color: #7a1f1f;
+    font-weight: bold;
+    font-size: 12.5px;
+    margin: 14px 0 8px 0;
+    border-bottom: 1px solid #c7c2ac;
+    padding-bottom: 3px;
+  }
+  .ti-section-title:first-child { margin-top: 0; }
+  .ti-row2 { display: flex; gap: 10px; }
+  .ti-row2 > div { flex: 1; }
+  #f-gst-amount-preview, #f-bill-total { background: #eef1f6; color: #333; font-weight: bold; text-align: right; }
+  #ti-bill-total-field { border-top: 2px solid #7a1f1f; padding-top: 8px; margin-top: 4px; }
+  #ti-bill-total-field label { font-size: 13px; color: #7a1f1f; }
+  #f-bill-total { font-size: 15px; }
+  .ti-f3-hint {
+    float: right;
+    font-weight: normal;
+    color: #1a4fa0;
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: default;
+  }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="dlg-window">
+  <div class="dlg-titlebar">
+    <span>Invoice List</span>
+    <a href="{{ url_for('dashboard') }}" class="x">&#10005;</a>
+  </div>
+
+  <div class="dlg-toolbar">
+    <div class="search-field">
+      <label>Search</label>
+      <input type="text" id="ti-search" placeholder="Bill No. / Buyer / Chassis" oninput="tiFilter()">
+    </div>
+    <div class="ti-toolbar-btns dlg-toolbar-btns">
+      <button type="button" class="dlg-btn" onclick="tiOpenAdd()"><span class="ic">📄</span>Add</button>
+      <button type="button" class="dlg-btn" onclick="tiModify()"><span class="ic">📝</span>Modify</button>
+      <button type="button" class="dlg-btn danger" onclick="tiDelete()"><span class="ic">🗑</span>Delete</button>
+      <button type="button" class="dlg-btn" onclick="tiPrint()"><span class="ic">🖶</span>Print</button>
+      <a href="{{ url_for('dashboard') }}" class="dlg-btn exit"><span class="ic">🚪</span>Exit</a>
+    </div>
+  </div>
+
+  <div class="dlg-body">
+    <div class="dlg-table-wrap">
+      <table class="dlg-table" id="ti-table">
+        <thead>
+          <tr>
+            <th>Date</th><th>Bill No.</th><th>Buyer</th><th>Chassis</th>
+            <th>Taxable</th><th>Tax</th><th>Total</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in invoices %}
+          <tr data-id="{{ i.id }}"
+              data-print-url="{{ url_for('tax_invoice_print_options', invoice_id=i.id) }}"
+              data-cancel-url="{{ url_for('tax_invoice_cancel', invoice_id=i.id) }}"
+              data-delete-url="{{ url_for('tax_invoice_delete', invoice_id=i.id) }}"
+              onclick="tiSelectRow(this)"
+              ondblclick="tiSelectRow(this); tiOpenEdit({{ i.id }});"
+              {% if i.cancelled %}style="color:#aaa; text-decoration:line-through;"{% endif %}>
+            <td>{{ i.date.strftime('%d/%m/%Y') if i.date else '' }}</td>
+            <td>{{ i.bill_no }}</td>
+            <td>{{ i.buyer_name }}</td>
+            <td>{{ i.chassis_no }}</td>
+            <td>{{ '%.2f'|format(i.taxable_value) }}</td>
+            <td>{{ '%.2f'|format(i.tax_amount) }} {{ '(IGST)' if i.is_inter_state else '(C+S GST)' }}</td>
+            <td>{{ '%.2f'|format(i.bill_total) }}</td>
+            <td>{{ 'Cancelled' if i.cancelled else 'OK' }}</td>
+          </tr>
+          {% else %}
+          <tr class="empty"><td colspan="8">No tax invoices yet — click "Add" above.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p style="color:#888; font-size:11.5px; margin-top:8px; margin-bottom:0;">
+      Click a row to select it, then use Print / Modify / Delete above — or double-click a row to edit it directly.
+    </p>
+  </div>
+</div>
+
+<div class="pv-modal-backdrop" id="ti-modal-backdrop" style="display:none;" onclick="tiToggleForm();"></div>
+
+<div class="dlg-window pv-modal-window ti-modal-window" id="ti-form-window" style="display:none;">
+  <div class="dlg-titlebar">
+    <span id="ti-form-title">Invoice</span>
+    <a href="#" class="x" onclick="tiToggleForm(); return false;">&#10005;</a>
+  </div>
+  <div class="dlg-body">
+    <form method="post" action="{{ url_for('tax_invoice_create') }}" id="ti-form">
+
+      <div class="ti-top-row">
+        <div class="pv-field"><label>Date</label><input type="date" name="date" value="{{ today_iso }}"></div>
+        <div class="pv-field"><label>Bill No.</label><input type="text" name="bill_no" value="{{ suggested_bill_no }}"></div>
+        <div class="pv-field" id="ti-challan-field" style="flex:1;">
+          <label>Delivery Challan (chassis awaiting invoice)</label>
+          <select name="challan_id" id="challan-select" required onchange="fillFromChallan()">
+            <option value="">-- Select Challan --</option>
+            {% for c in available_challans %}
+              <option value="{{ c.id }}"
+                data-dealer="{{ c.dealer.name if c.dealer else '' }}"
+                data-product="{{ c.product_name or '' }}"
+                data-chassis="{{ c.chassis_no or '' }}"
+                data-motor="{{ c.motor_no or '' }}"
+                data-controller="{{ c.controller_no or '' }}"
+                data-other="{{ c.other or '' }}"
+                data-colour="{{ c.colour or '' }}"
+                data-saleval="{{ c.sale_value or 0 }}">
+                {{ c.challan_no }} — {{ c.chassis_no }} ({{ c.dealer.name if c.dealer else '' }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="pv-field" id="ti-chassis-readonly" style="flex:1; display:none;">
+          <label>Chassis No. <span style="font-weight:normal; color:#888;">(fixed — set via Delivery Challan)</span></label>
+          <input type="text" id="f-chassis-readonly" readonly>
+        </div>
+      </div>
+      {% if not available_challans %}
+      <p style="color:#888; font-size:11.5px; margin-top:-6px;" id="ti-no-challan-note">No delivery challans awaiting invoice — create one first.</p>
+      {% endif %}
+
+      <div class="ti-panels">
+
+        <div class="ti-col">
+          <div class="ti-section-title">[ Buyer's Details ]</div>
+
+          <div class="pv-field">
+            <label>Name <span style="font-weight:normal; color:#888;">(defaults to dealer, editable)</span>
+              <span class="ti-f3-hint" title="Pick a saved customer to auto-fill their details">F3 : Customer List</span>
+            </label>
+            <input type="text" name="buyer_name" id="f-buyer-name" list="customer-list" onchange="tiFillFromCustomer()">
+            <datalist id="customer-list">
+              {% for c in customer_list %}
+              <option value="{{ c.name }}"
+                data-address="{{ ((c.address1 or '') ~ ' ' ~ (c.address2 or '')).strip() }}" data-gst="{{ c.gst_no or '' }}"
+                data-mobile="{{ c.mobile or '' }}"
+                data-state="{{ c.state or '' }}" data-statecode="{{ c.state_code or '' }}">
+              {% endfor %}
+            </datalist>
+          </div>
+          <div class="ti-row2">
+            <div class="pv-field" style="flex:0 0 90px;">
+              <label>Relation</label>
+              <select name="buyer_relation" id="f-buyer-relation">
+                <option value="S/o">S/o</option>
+                <option value="D/o">D/o</option>
+                <option value="W/o">W/o</option>
+                <option value="C/o">C/o</option>
+              </select>
+            </div>
+            <div class="pv-field"><label>Father's Name</label><input type="text" name="buyer_father_name" id="f-buyer-father"></div>
+          </div>
+          <div class="pv-field"><label>Address</label><input type="text" name="buyer_address" id="f-buyer-address"></div>
+
+          <div class="ti-row2">
+            <div class="pv-field">
+              <label>Sale Amount <span style="font-weight:normal; color:#888;">(internal)</span></label>
+              <input type="number" step="0.01" name="sale_amount" id="f-sale-amount" oninput="tiSyncGstAmount()">
+            </div>
+            <div class="pv-field"><label>Received Amount</label><input type="number" step="0.01" name="amount_received" value="0"></div>
+          </div>
+
+          <div class="ti-row2">
+            <div class="pv-field">
+              <label>GSTIN/PAN</label>
+              <input type="text" name="buyer_gst_no" id="f-buyer-gst" oninput="document.getElementsByName('buyer_pan')[0].value=this.value;">
+              <input type="hidden" name="buyer_pan">
+            </div>
+            <div class="pv-field">
+              <label>Financer (Hypothecation)</label>
+              <input type="text" name="financer_name" list="financer-list">
+              <datalist id="financer-list">{% for f in financers %}<option value="{{ f.name }}">{% endfor %}</datalist>
+            </div>
+          </div>
+          <div class="ti-row2">
+            <div class="pv-field"><label>Aadhar</label><input type="text" name="buyer_aadhar" id="f-buyer-aadhar"></div>
+            <div class="pv-field"><label>Hypothecation Amount</label><input type="number" step="0.01" name="hypothecation_amount" value="0"></div>
+          </div>
+          <div class="ti-row2">
+            <div class="pv-field"><label>Date of Birth</label><input type="date" name="buyer_dob"></div>
+            <div class="pv-field"><label>Cancelled Cheque No.</label><input type="text" name="cancelled_cheque_no"></div>
+          </div>
+          <div class="ti-row2">
+            <div class="pv-field"><label>Mobile No.</label><input type="text" name="buyer_mobile" id="f-buyer-mobile"></div>
+            <div class="pv-field">
+              <label>Bank <span style="font-weight:normal; color:#888;">(customer's bank — editable)</span></label>
+              <input type="text" name="bank_name" id="f-bank-select" list="bank-list" onchange="tiFillIfsc()">
+              <datalist id="bank-list">
+                {% for b in banks %}
+                <option value="{{ b.name }}" data-ifsc="{{ b.ifsc or '' }}">{{ b.name }}{% if b.account_no %} (A/c {{ b.account_no }}){% endif %}</option>
+                {% endfor %}
+              </datalist>
+            </div>
+          </div>
+          <div class="ti-row2">
+            <div class="pv-field"><label>State Code</label><input type="text" name="buyer_state_code" id="f-buyer-statecode" value="07"></div>
+            <div class="pv-field"><label>IFSC Code</label><input type="text" name="bank_ifsc" id="f-ifsc-display" placeholder="auto-fills from bank list, or type your own"></div>
+          </div>
+          <div class="ti-row2">
+            <div class="pv-field"><label>State</label><input type="text" name="buyer_state" id="f-buyer-state" value="DELHI"></div>
+            <div class="pv-field"><label>CVR No.</label><input type="text" name="cvr_no"></div>
+          </div>
+          <div class="ti-row2">
+            <div class="pv-field">
+              <label>Mode / Term</label>
+              <input type="text" name="mode_term" value="BANK/CASH">
+            </div>
+            <div class="pv-field"><label>License No.</label><input type="text" name="license_no"></div>
+          </div>
+
+          <div class="ti-row3" style="display:flex; gap:10px;">
+            <div class="pv-field" style="flex:1;">
+              <label>RTO</label>
+              <input type="text" name="rto_name" list="rto-list">
+              <datalist id="rto-list">{% for r in rtos %}<option value="{{ r.name }}">{% endfor %}</datalist>
+            </div>
+            <div class="pv-field" style="flex:1;"><label>Vehicle No.</label><input type="text" name="vehicle_reg_no"></div>
+            <div class="pv-field" style="flex:1;"><label>Despatch Through</label><input type="text" name="despatch_through"></div>
+          </div>
+          <div class="pv-field"><label>Remarks</label><input type="text" name="remarks"></div>
+
+          <div class="ti-section-title">[ Other Reference ]</div>
+          <div class="ti-row2">
+            <div class="pv-field"><label>E-Way Bill No.</label><input type="text" name="eway_bill_no"></div>
+            <div class="pv-field"><label>Subsidy Amount</label><input type="number" step="0.01" name="subsidy_amount" value="0"></div>
+          </div>
+          <div class="ti-row2">
+            <div class="pv-field"><label>Ledger No.</label><input type="text" name="ledger_no"></div>
+            <div class="pv-field"><label>Voucher No.</label><input type="text" name="voucher_no"></div>
+          </div>
+          <div class="pv-field"><label>Chassis Record No.</label><input type="text" name="chassis_record_no"></div>
+        </div>
+
+        <div class="ti-col" style="max-width:380px;">
+          <div class="ti-section-title">[ Product ]</div>
+          <div class="pv-field"><label>Product Name</label><input type="text" id="f-product" readonly tabindex="-1"></div>
+          <div class="pv-field"><label>Chassis No.</label><input type="text" id="f-chassis-display" readonly tabindex="-1"></div>
+          <div class="pv-field"><label>Dealer Name</label><input type="text" id="f-dealer" readonly tabindex="-1"></div>
+          <div class="pv-field"><label>Motor No.</label><input type="text" id="f-motor" readonly tabindex="-1"></div>
+          <div class="pv-field"><label>Controller No.</label><input type="text" id="f-controller" readonly tabindex="-1"></div>
+          <div class="pv-field"><label>Other</label><input type="text" id="f-other" readonly tabindex="-1"></div>
+          <div class="pv-field"><label>Colour</label><input type="text" id="f-colour" readonly tabindex="-1"></div>
+
+          <div class="ti-section-title">[ Amount / Tax ]</div>
+          <div class="pv-field" style="max-width:220px;">
+            <label>Inside State / Outside State</label>
+            <select name="state_type">
+              <option value="I">I — Inside State (CGST+SGST)</option>
+              <option value="O">O — Outside State (IGST)</option>
+            </select>
+          </div>
+          <div class="pv-field">
+            <label>Amount <span style="font-weight:normal; color:#888;">(GST taxable value — separate from Sale Amount)</span></label>
+            <input type="number" step="0.01" name="gst_sale_amount" id="f-gst-sale-amount"
+                   oninput="tiGstAmountTouched = true; tiRecalcTotals();">
+          </div>
+          <div class="ti-row2">
+            <div class="pv-field"><label>Discount @</label><input type="number" step="0.01" name="discount" id="f-discount" value="0" oninput="tiRecalcTotals()"></div>
+          </div>
+          <div class="ti-row2">
+            <div class="pv-field"><label>GST @</label><input type="number" step="0.01" name="gst_rate" id="f-gst-rate" value="5" oninput="tiRecalcTotals()"></div>
+            <div class="pv-field"><label>GST Amt.</label><input type="text" id="f-gst-amount-preview" readonly tabindex="-1"></div>
+          </div>
+          <div class="pv-field"><label>Insurance Charges</label><input type="number" step="0.01" name="insurance_amount" id="f-insurance" value="0" oninput="tiRecalcTotals()"></div>
+          <div class="pv-field"><label>Registration &amp; Other Charges</label><input type="number" step="0.01" name="registration_amount" id="f-registration" value="0" oninput="tiRecalcTotals()"></div>
+          <div class="pv-field" id="ti-bill-total-field">
+            <label>Bill Total</label>
+            <input type="text" id="f-bill-total" readonly tabindex="-1">
+          </div>
+        </div>
+
+      </div>
+
+      <div class="btn-row" style="margin-top:14px;">
+        <button type="submit" class="btn-primary">💾 Save</button>
+        <a class="btn" href="#" onclick="tiToggleForm(); return false;">↺ Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form id="ti-cancel-form" method="post" style="display:none;"></form>
+
+<script>
+let tiGstAmountTouched = false;
+
+function fillFromChallan() {
+  const sel = document.getElementById('challan-select');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('f-buyer-name').value = opt.dataset.dealer || '';
+  document.getElementById('f-dealer').value = opt.dataset.dealer || '';
+  document.getElementById('f-product').value = opt.dataset.product || '';
+  document.getElementById('f-chassis-display').value = opt.dataset.chassis || '';
+  document.getElementById('f-motor').value = opt.dataset.motor || '';
+  document.getElementById('f-controller').value = opt.dataset.controller || '';
+  document.getElementById('f-other').value = opt.dataset.other || '';
+  document.getElementById('f-colour').value = opt.dataset.colour || '';
+  document.getElementById('f-sale-amount').value = opt.dataset.saleval || '';
+  tiGstAmountTouched = false;
+  tiSyncGstAmount();
+}
+
+// Bank is a free-text field (the customer's bank, not restricted to the
+// Setup > B. Bank Details master). If the typed name matches a saved bank,
+// its IFSC is offered as a convenience default — but only when the IFSC
+// box is still empty, so a manually typed IFSC is never overwritten.
+function tiFillIfsc() {
+  const ifscField = document.getElementById('f-ifsc-display');
+  if (ifscField.value.trim()) return;
+  const typed = document.getElementById('f-bank-select').value;
+  const options = document.getElementById('bank-list').options;
+  for (const opt of options) {
+    if (opt.value === typed) {
+      ifscField.value = opt.dataset.ifsc || '';
+      break;
+    }
+  }
+}
+
+// F3 : Customer List — picking a saved dealer/customer from the Name
+// datalist fills their address/GST/mobile/state, same as the legacy app.
+function tiFillFromCustomer() {
+  const input = document.getElementById('f-buyer-name');
+  const options = document.getElementById('customer-list').options;
+  for (const opt of options) {
+    if (opt.value === input.value) {
+      document.getElementById('f-buyer-address').value = opt.dataset.address || '';
+      document.getElementById('f-buyer-gst').value = opt.dataset.gst || '';
+      document.getElementById('f-buyer-mobile').value = opt.dataset.mobile || '';
+      document.getElementById('f-buyer-state').value = opt.dataset.state || '';
+      document.getElementById('f-buyer-statecode').value = opt.dataset.statecode || '';
+      break;
+    }
+  }
+}
+
+// Keeps "Amount (for GST)" mirroring "Sale Amount (internal)" until the
+// user edits the GST amount field directly — after that they're independent.
+function tiSyncGstAmount() {
+  if (!tiGstAmountTouched) {
+    document.getElementById('f-gst-sale-amount').value = document.getElementById('f-sale-amount').value;
+  }
+  tiRecalcTotals();
+}
+
+// Live preview of GST amount + Bill Total, mirroring TaxInvoice's
+// taxable_value / tax_amount / bill_total properties in models.py.
+function tiRecalcTotals() {
+  const num = id => parseFloat(document.getElementById(id).value) || 0;
+  const gstAmount = num('f-gst-sale-amount');
+  const discount = num('f-discount');
+  const gstRate = num('f-gst-rate');
+  const insurance = num('f-insurance');
+  const registration = num('f-registration');
+  const taxable = Math.max(gstAmount - discount, 0);
+  const tax = Math.round(taxable * gstRate) / 100;
+  const total = taxable + tax + insurance + registration;
+  document.getElementById('f-gst-amount-preview').value = tax.toFixed(2);
+  document.getElementById('f-bill-total').value = total.toFixed(2);
+}
+
+function tiToggleForm() {
+  const win = document.getElementById('ti-form-window');
+  const backdrop = document.getElementById('ti-modal-backdrop');
+  const showing = win.style.display !== 'none';
+  win.style.display = showing ? 'none' : 'block';
+  backdrop.style.display = showing ? 'none' : 'block';
+  document.body.style.overflow = showing ? '' : 'hidden';
+}
+
+// Per-invoice snapshot of editable fields, keyed by id — filled into the
+// popup on double-click / Modify without an extra server round-trip.
+const tiInvoicesById = {{ invoices_by_id | tojson }};
+const tiCreateUrl = "{{ url_for('tax_invoice_create') }}";
+const tiUpdateUrlTemplate = "{{ url_for('tax_invoice_update', invoice_id=0) }}";
+const tiEditFieldNames = [
+  'bill_no','buyer_name','buyer_relation','buyer_father_name','buyer_address',
+  'buyer_gst_no','buyer_pan','buyer_aadhar',
+  'buyer_mobile','buyer_state','buyer_state_code','state_type','sale_amount','gst_sale_amount','discount','gst_rate',
+  'insurance_amount','registration_amount','financer_name','hypothecation_amount',
+  'amount_received','subsidy_amount','rto_name','vehicle_reg_no','despatch_through',
+  'eway_bill_no','mode_term','bank_name','bank_ifsc','cvr_no','license_no','cancelled_cheque_no','remarks','ledger_no','voucher_no',
+  'chassis_record_no'
+];
+
+function tiOpenAdd() {
+  const form = document.getElementById('ti-form');
+  form.reset();
+  form.action = tiCreateUrl;
+  document.getElementById('ti-form-title').textContent = 'Invoice';
+  document.getElementById('ti-challan-field').style.display = '';
+  document.getElementById('ti-chassis-readonly').style.display = 'none';
+  document.getElementById('challan-select').required = true;
+  document.getElementById('f-product').value = '';
+  document.getElementById('f-dealer').value = '';
+  document.getElementById('f-chassis-display').value = '';
+  document.getElementById('f-motor').value = '';
+  document.getElementById('f-controller').value = '';
+  document.getElementById('f-other').value = '';
+  document.getElementById('f-colour').value = '';
+  tiGstAmountTouched = false;
+  tiRecalcTotals();
+  tiFillIfsc();
+  tiToggleForm();
+}
+
+function tiOpenEdit(id) {
+  const d = tiInvoicesById[id];
+  if (!d) { alert('Could not load this invoice for editing.'); return; }
+  const form = document.getElementById('ti-form');
+  tiGstAmountTouched = true;
+  document.getElementById('ti-form-title').textContent = 'Invoice — Modify (' + d.bill_no + ')';
+  form.action = tiUpdateUrlTemplate.replace('/0/update', '/' + id + '/update');
+  document.getElementById('ti-challan-field').style.display = 'none';
+  document.getElementById('challan-select').required = false;
+  document.getElementById('ti-chassis-readonly').style.display = '';
+  document.getElementById('f-chassis-readonly').value = d.chassis_no || '';
+  document.getElementById('f-product').value = d.product_name || '';
+  document.getElementById('f-dealer').value = d.dealer_name || '';
+  document.getElementById('f-chassis-display').value = d.chassis_no || '';
+  document.getElementById('f-motor').value = d.motor_no || '';
+  document.getElementById('f-controller').value = d.controller_no || '';
+  document.getElementById('f-other').value = d.other_desc || '';
+  form.elements['buyer_dob'].value = d.buyer_dob || '';
+  document.getElementById('f-colour').value = d.colour || '';
+  form.elements['date'].value = d.date || '';
+  tiEditFieldNames.forEach(n => {
+    if (form.elements[n] !== undefined) form.elements[n].value = (d[n] === undefined || d[n] === null) ? '' : d[n];
+  });
+  tiRecalcTotals();
+  tiFillIfsc();
+  tiToggleForm();
+}
+
+let tiSelectedRow = null;
+function tiSelectRow(tr) {
+  if (tr.classList.contains('empty')) return;
+  if (tiSelectedRow) tiSelectedRow.classList.remove('selected');
+  tiSelectedRow = tr;
+  tr.classList.add('selected');
+}
+
+function tiPrint() {
+  if (!tiSelectedRow) { alert('Select an invoice row first.'); return; }
+  window.location.href = tiSelectedRow.dataset.printUrl;
+}
+
+function tiModify() {
+  if (!tiSelectedRow) { alert('Select an invoice row first.'); return; }
+  tiOpenEdit(tiSelectedRow.dataset.id);
+}
+
+function tiDelete() {
+  if (!tiSelectedRow) { alert('Select an invoice row first.'); return; }
+  if (!confirm('Delete this invoice? The chassis will return to Delivery Challan.')) return;
+  const f = document.getElementById('ti-cancel-form');
+  f.action = tiSelectedRow.dataset.deleteUrl;
+  f.submit();
+}
+
+function tiFilter() {
+  const q = document.getElementById('ti-search').value.trim().toLowerCase();
+  document.querySelectorAll('#ti-table tbody tr').forEach(tr => {
+    if (tr.classList.contains('empty')) return;
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

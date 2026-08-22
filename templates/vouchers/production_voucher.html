@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dialog.css') }}">
+{% endblock %}
+{% block content %}
+
+<div class="dlg-window">
+  <div class="dlg-titlebar">
+    <span>📋 Production Voucher List</span>
+    <a href="{{ url_for('dashboard') }}" class="x">&#10005;</a>
+  </div>
+  <div class="dlg-body">
+    <button type="button" class="pv-toggle-btn" onclick="pvToggleForm()">➕ New Production Voucher</button>
+
+    <table class="grid">
+      <thead>
+        <tr>
+          <th>Date</th><th>Vou.No.</th><th>Item Name</th><th>Qty</th><th>Chassis</th>
+          <th style="width:70px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in vouchers %}
+        <tr>
+          <td>{{ v.date.strftime('%d/%m/%Y') if v.date else '' }}</td>
+          <td>{{ v.vou_no }}</td>
+          <td>{{ v.product_name }}</td>
+          <td>{{ v.quantity }}</td>
+          <td>{{ v.chassis_no }}</td>
+          <td class="row-actions">
+            <form method="post" action="{{ url_for('production_voucher_delete', voucher_id=v.id) }}" onsubmit="return confirm('Delete this voucher? The chassis will also be removed if still in Manufacturing.');">
+              <button type="submit" class="btn-danger">Del</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="color:#888;">No production vouchers yet — click "New Production Voucher" above.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="pv-modal-backdrop" id="pv-modal-backdrop" style="display:none;" onclick="pvToggleForm();"></div>
+
+<div class="dlg-window pv-modal-window" id="pv-form-window" style="display:none;">
+  <div class="dlg-titlebar">
+    <span>🏭 Production Voucher</span>
+    <a href="#" class="x" onclick="pvToggleForm(); return false;">&#10005;</a>
+  </div>
+  <div class="dlg-body">
+    <form method="post" action="{{ url_for('production_voucher_create') }}" id="pv-form">
+      <div class="pv-panels">
+
+        <!-- LEFT: formula / raw materials -->
+        <div class="pv-left">
+          <div class="pv-row2">
+            <div class="pv-field"><label>Vou. No.</label><input type="text" name="vou_no" value="{{ suggested_vou_no }}"></div>
+            <div class="pv-field"><label>Date</label><input type="date" name="date" id="pv-date" value="{{ today_iso }}" onchange="pvGenerateCode(true);"></div>
+          </div>
+
+          <div class="pv-row2">
+            <div class="pv-field">
+              <label>Finished Product</label>
+              <select id="pv-product" name="product_name" onchange="pvOnProductChange();">
+                <option value="">-- Select Finished Product --</option>
+                {% for p in finished_products %}
+                <option value="{{ p.name }}">{{ p.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="pv-field">
+              <label>Formula Name</label>
+              <select id="pv-formula-name" name="formula_name">
+                <option value="">-- Select Finished Product First --</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pv-row2">
+            <div class="pv-field"><label>Quantity</label><input type="number" name="quantity" id="pv-quantity-label" value="1" min="1"></div>
+            <div class="pv-field" style="display:flex; align-items:flex-end;">
+              <button type="button" class="pv-btn-inline" onclick="pvUpdateFromFormula()">🔄 Update From Formula</button>
+            </div>
+          </div>
+
+          <table class="pv-grid" id="pv-material-grid">
+            <thead>
+              <tr><th style="width:16%;">Qty</th><th style="width:16%;">Unit</th><th>Raw Material Name</th><th style="width:24px;"></th></tr>
+            </thead>
+            <tbody id="pv-material-tbody">
+              <!-- rows injected by JS -->
+            </tbody>
+          </table>
+          <button type="button" class="pv-btn-inline" onclick="pvAddRow('', '', 1, 'PCS')" style="margin-top:6px;">+ Add Row</button>
+
+          <div class="pv-field" style="margin-top:12px;">
+            <label>Machnic</label>
+            <select name="machnic">
+              <option value="">-- Select Machnic --</option>
+              {% for m in mechanics %}
+              <option value="{{ m.name }}">{{ m.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="pv-field">
+            <label>Remarks</label>
+            <input type="text" name="remarks">
+          </div>
+        </div>
+
+        <!-- RIGHT: chassis / battery / checkboxes -->
+        <div class="pv-right">
+          <div class="pv-field">
+            <label>Chassis No.</label>
+            <input type="text" name="chassis_no" id="pv-chassis" required>
+            <div id="pv-chassis-warning" style="display:none; color:#a15c00; font-size:12px; margin-top:4px;">
+              ⚠ This model has no Item Code set in Setup &gt; 3. Product Master, so a generic placeholder (<code>MD9GRDDE</code>) was used instead of this model's own fixed code — every unconfigured model will share the same one. Add its Item Code (for Chassis No.) there, then regenerate.
+            </div>
+          </div>
+          <div class="pv-row2">
+            <div class="pv-field"><label>Motor No.</label><input type="text" name="motor_no" id="pv-motor"></div>
+            <div class="pv-field"><label>Controller No.</label><input type="text" name="controller_no" id="pv-controller"></div>
+          </div>
+          <button type="button" class="pv-btn-inline" onclick="pvGenerateCode()">🔢 Generate New Code</button>
+
+          <div class="pv-field" style="margin-top:12px;">
+            <label>Colour</label>
+            <input type="text" name="colour" list="colour-list">
+            <datalist id="colour-list">
+              {% for c in colours %}<option value="{{ c.name }}">{% endfor %}
+            </datalist>
+          </div>
+          <div class="pv-field">
+            <label>Other</label>
+            <input type="text" name="other" placeholder="e.g. SS">
+          </div>
+
+          <div class="pv-field">
+            <label>Battery Make</label>
+            <input type="text" name="battery_maker" list="battery-list">
+            <datalist id="battery-list">
+              {% for b in battery_makers %}<option value="{{ b.name }}">{% endfor %}
+            </datalist>
+          </div>
+          <div class="pv-row3">
+            <div class="pv-field"><label>Battery No.1</label><input type="text" name="battery_no1"></div>
+            <div class="pv-field"><label>Battery No.2</label><input type="text" name="battery_no2"></div>
+          </div>
+          <div class="pv-row3">
+            <div class="pv-field"><label>Battery No.3</label><input type="text" name="battery_no3"></div>
+            <div class="pv-field"><label>Battery No.4</label><input type="text" name="battery_no4"></div>
+          </div>
+
+          <div class="pv-checks">
+            <label><input type="checkbox" name="jack" checked> Jack</label>
+            <label><input type="checkbox" name="mat" checked> Mat</label>
+            <label><input type="checkbox" name="toolkit" checked> Toolkit</label>
+            <label><input type="checkbox" name="stapney"> Stapney</label>
+            <label><input type="checkbox" name="charger" checked> Charger</label>
+            <label><input type="checkbox" name="front_glass"> Front Glass</label>
+            <label><input type="checkbox" name="center_lock"> Center Lock</label>
+            <label><input type="checkbox" name="h_lock"> H Lock</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row" style="margin-top:14px;">
+        <button type="submit" class="btn-primary">💾 Save</button>
+        <a class="btn" href="#" onclick="pvToggleForm(); return false;">↺ Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+let pvRowSeq = 0;
+function pvAddRow(name, code, qty, unit) {
+  pvRowSeq++;
+  const tbody = document.getElementById('pv-material-tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="number" step="0.01" name="item_qty[]" value="${qty ?? 1}"></td>
+    <td><input type="text" name="item_unit[]" value="${unit ?? 'PCS'}"></td>
+    <td>
+      <input type="hidden" name="item_code[]" value="${code ?? ''}">
+      <input type="text" name="item_name[]" value="${name ?? ''}" placeholder="Raw material name">
+    </td>
+    <td class="rm-row-btn" onclick="this.closest('tr').remove()">✕</td>`;
+  tbody.appendChild(tr);
+}
+
+function pvClearRows() {
+  document.getElementById('pv-material-tbody').innerHTML = '';
+}
+
+const pvFormulasByProduct = {{ formulas_by_product | tojson }};
+
+function pvOnProductChange() {
+  const product = document.getElementById('pv-product').value;
+  const formulaSel = document.getElementById('pv-formula-name');
+  const names = pvFormulasByProduct[product] || [];
+  formulaSel.innerHTML = '';
+  if (!product) {
+    formulaSel.appendChild(new Option('-- Select Finished Product First --', ''));
+  } else if (names.length === 0) {
+    formulaSel.appendChild(new Option('(no formula set)', ''));
+  } else {
+    names.forEach(n => formulaSel.appendChild(new Option(n, n)));
+  }
+  document.getElementById('pv-quantity-label').focus();
+  pvGenerateCode(true);
+}
+
+function pvUpdateFromFormula() {
+  const product = document.getElementById('pv-product').value;
+  const formula = document.getElementById('pv-formula-name').value;
+  if (!product) { alert('Select a Finished Product first.'); return; }
+  const url = '{{ url_for("production_voucher_formula_lines") }}?product=' + encodeURIComponent(product)
+            + '&formula=' + encodeURIComponent(formula);
+  fetch(url)
+    .then(r => r.json())
+    .then(lines => {
+      pvClearRows();
+      if (lines.length === 0) {
+        alert('No Production Formula found for "' + product + '". Add rows manually, or set one up under Setup > 7. Production Formula.');
+        pvAddRow('', '', 1, 'PCS');
+        return;
+      }
+      lines.forEach(l => pvAddRow(l.item_name, l.item_code, l.qty, l.unit));
+    })
+    .catch(() => alert('Could not load the Production Formula — please add rows manually.'));
+}
+
+function pvGenerateCode(silent) {
+  const product = document.getElementById('pv-product').value;
+  if (!product) {
+    if (!silent) alert('Select a Finished Product first.');
+    return;
+  }
+  const voucherDate = document.getElementById('pv-date').value;
+  fetch('{{ url_for("production_voucher_generate_code") }}?product=' + encodeURIComponent(product)
+        + '&date=' + encodeURIComponent(voucherDate))
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('pv-chassis').value = d.chassis_no;
+      document.getElementById('pv-motor').value = d.motor_no;
+      document.getElementById('pv-controller').value = d.controller_no;
+      document.getElementById('pv-chassis-warning').style.display = d.missing_item_code ? 'block' : 'none';
+      if (!silent && (d.month_code === '?' || d.year_code === '?')) {
+        alert('Note: this voucher date is outside the AIS-007 Table 11 range (2017–2046) — the month/year code segment could not be determined and was left as "?". Please check the date.');
+      }
+    })
+    .catch(() => { if (!silent) alert('Could not generate a code — please enter the Chassis No. manually.'); });
+}
+
+function pvToggleForm() {
+  const win = document.getElementById('pv-form-window');
+  const backdrop = document.getElementById('pv-modal-backdrop');
+  const showing = win.style.display !== 'none';
+  win.style.display = showing ? 'none' : 'block';
+  backdrop.style.display = showing ? 'none' : 'block';
+  document.body.style.overflow = showing ? '' : 'hidden';
+  if (!showing) {
+    document.getElementById('pv-chassis-warning').style.display = 'none';
+    if (document.getElementById('pv-material-tbody').children.length === 0) {
+      pvAddRow('', '', 1, 'PCS');
+    }
+  }
+}
+</script>
+{% endblock %}

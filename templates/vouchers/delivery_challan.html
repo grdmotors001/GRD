@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dialog.css') }}">
+<style>
+  .dc-modal-window { width: 760px; }
+  table.dlg-table tbody tr[data-print-url] { cursor: pointer; }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="dlg-window">
+  <div class="dlg-titlebar">
+    <span>Delivery Challan List</span>
+    <a href="{{ url_for('dashboard') }}" class="x">&#10005;</a>
+  </div>
+
+  <div class="dlg-toolbar">
+    <div class="search-field">
+      <label>Search</label>
+      <input type="text" id="dc-search" placeholder="Challan No. / Dealer / Chassis" oninput="dcFilter()">
+    </div>
+    <div class="dlg-toolbar-btns">
+      <button type="button" class="dlg-btn" onclick="dcOpenAdd(); dcToggleForm();"><span class="ic">📋</span>Add</button>
+      <button type="button" class="dlg-btn" onclick="dcModify()"><span class="ic">📝</span>Modify</button>
+      <button type="button" class="dlg-btn danger" onclick="dcDelete()"><span class="ic">🗑</span>Delete</button>
+      <button type="button" class="dlg-btn" onclick="dcCancelToggle()"><span class="ic">🚫</span>Cancel</button>
+      <button type="button" class="dlg-btn" onclick="dcPrint()"><span class="ic">🖶</span>Print</button>
+      <a href="{{ url_for('dashboard') }}" class="dlg-btn exit"><span class="ic">🚪</span>Exit</a>
+    </div>
+  </div>
+
+  <div class="dlg-body">
+    <div class="dlg-table-wrap">
+      <table class="dlg-table" id="dc-table">
+        <thead>
+          <tr>
+            <th>Date</th><th>Challan No.</th><th>Dealer</th><th>Product</th><th>Chassis</th>
+            <th>Colour</th><th>Sale Value</th><th>Salesman</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in challans %}
+          <tr data-id="{{ c.id }}"
+              data-print-url="{{ url_for('delivery_challan_print', challan_id=c.id) }}"
+              data-cancel-url="{{ url_for('delivery_challan_cancel', challan_id=c.id) }}"
+              data-delete-url="{{ url_for('delivery_challan_delete', challan_id=c.id) }}"
+              onclick="dcSelectRow(this)"
+              ondblclick="dcSelectRow(this); dcOpenEdit({{ c.id }}); dcToggleForm();"
+              {% if c.cancelled %}style="color:#aaa; text-decoration:line-through;"{% endif %}>
+            <td>{{ c.date.strftime('%d/%m/%Y') if c.date else '' }}</td>
+            <td>{{ c.challan_no }}</td>
+            <td>{{ c.dealer.name if c.dealer else '' }}</td>
+            <td>{{ c.product_name }}</td>
+            <td>{{ c.chassis_no }}</td>
+            <td>{{ c.colour }}</td>
+            <td>{{ '%.2f'|format(c.sale_value) if c.sale_value else '' }}</td>
+            <td>{{ c.salesman or '' }}</td>
+            <td>
+              {% if bill_no_by_challan.get(c.id) %}
+              <span style="color:#0e6b4f; font-weight:bold;">Sold</span> <span style="color:#888; font-size:11px;">({{ bill_no_by_challan[c.id] }})</span>
+              {% else %}
+              <span style="color:#b22222; font-weight:bold;">Unsold</span>
+              {% endif %}
+              {% if c.cancelled %} <span style="color:#b22222;">(Cancelled)</span>{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr class="empty"><td colspan="9">No delivery challans yet — click "Add" above.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p style="color:#888; font-size:11.5px; margin-top:8px; margin-bottom:0;">
+      Click a row to select it, then use Print / Modify / Delete / Cancel above — or double-click a row to edit it directly.
+    </p>
+  </div>
+</div>
+
+<div class="pv-modal-backdrop" id="dc-modal-backdrop" style="display:none;" onclick="dcToggleForm();"></div>
+
+<div class="dlg-window pv-modal-window dc-modal-window" id="dc-form-window" style="display:none;">
+  <div class="dlg-titlebar">
+    <span id="dc-form-title">E-Rickshaw Delivery Challan</span>
+    <a href="#" class="x" onclick="dcToggleForm(); return false;">&#10005;</a>
+  </div>
+  <div class="dlg-body">
+    <form class="stack" method="post" action="{{ url_for('delivery_challan_create') }}" id="dc-form">
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>Challan No.</label>
+          <input type="text" name="challan_no" id="dc-f-challan-no" value="{{ suggested_challan_no }}">
+        </div>
+        <div style="flex:1;">
+          <label>Date</label>
+          <input type="date" name="date" id="dc-f-date" value="{{ today_iso }}">
+        </div>
+      </div>
+
+      <label>Dealer Name</label>
+      <select name="dealer_id" id="dc-f-dealer" required>
+        <option value="">-- Select Dealer --</option>
+        {% for d in dealers %}<option value="{{ d.id }}">{{ d.name }}{% if d.code %} ({{ d.code }}){% endif %}</option>{% endfor %}
+      </select>
+      <p id="dc-dealer-locked-note" style="display:none; color:#888; font-size:11px; margin:-6px 0 8px;">Dealer/chassis can't be changed once a challan is saved — cancel and re-create it instead if that's wrong.</p>
+
+      <label id="dc-vehicle-label">Chassis No. (available, Manufacturing stage)</label>
+      <select name="vehicle_id" id="vehicle-select" required onchange="fillFromVehicle()">
+        <option value="">-- Select Chassis --</option>
+        {% for v in available_vehicles %}
+          <option value="{{ v.id }}"
+            data-model="{{ v.model_name or '' }}"
+            data-motor="{{ v.motor_no or '' }}"
+            data-controller="{{ v.controller_no or '' }}"
+            data-differential="{{ v.differential_no or '' }}"
+            data-colour="{{ v.colour or '' }}"
+            data-other="{{ v.other or '' }}">
+            {{ v.chassis_no }} — {{ v.model_name or '' }} ({{ v.colour or '' }})
+          </option>
+        {% endfor %}
+      </select>
+      {% if not available_vehicles %}
+      <p style="color:#888; font-size:11.5px;" id="dc-no-vehicle-note">No chassis currently in Manufacturing — add a Production Voucher first.</p>
+      {% endif %}
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;"><label>Product Name</label><input type="text" id="f-model" readonly></div>
+        <div style="flex:1;"><label>Colour</label><input type="text" id="f-colour" readonly></div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;"><label>Motor No.</label><input type="text" id="f-motor" readonly></div>
+        <div style="flex:1;"><label>Controller No.</label><input type="text" id="f-controller" readonly></div>
+      </div>
+
+      <label>Destination / Delivery Address</label>
+      <input type="text" name="destination" id="dc-f-destination">
+
+      <label>Battery Make</label>
+      <input type="text" name="battery_maker" id="dc-f-battery-maker" list="battery-list">
+      <datalist id="battery-list">{% for b in battery_makers %}<option value="{{ b.name }}">{% endfor %}</datalist>
+
+      <div style="display:flex; gap:8px;">
+        <div style="flex:1;"><label>Battery No.1</label><input type="text" name="battery_no1" id="dc-f-battery1"></div>
+        <div style="flex:1;"><label>Battery No.2</label><input type="text" name="battery_no2" id="dc-f-battery2"></div>
+        <div style="flex:1;"><label>Battery No.3</label><input type="text" name="battery_no3" id="dc-f-battery3"></div>
+        <div style="flex:1;"><label>Battery No.4</label><input type="text" name="battery_no4" id="dc-f-battery4"></div>
+      </div>
+
+      <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top:8px;">
+        <label style="font-weight:normal;"><input type="checkbox" name="toolkit" id="dc-f-toolkit" checked style="width:auto;"> Toolkit</label>
+        <label style="font-weight:normal;"><input type="checkbox" name="jack" id="dc-f-jack" checked style="width:auto;"> Jack</label>
+        <label style="font-weight:normal;"><input type="checkbox" name="charger" id="dc-f-charger" checked style="width:auto;"> Charger</label>
+        <label style="font-weight:normal;"><input type="checkbox" name="mat" id="dc-f-mat" checked style="width:auto;"> Mat</label>
+        <label style="font-weight:normal;"><input type="checkbox" name="stapney" id="dc-f-stapney" style="width:auto;"> Stapney</label>
+        <label style="font-weight:normal;"><input type="checkbox" name="front_glass" id="dc-f-front-glass" style="width:auto;"> Front Glass</label>
+        <label style="font-weight:normal;"><input type="checkbox" name="center_lock" id="dc-f-center-lock" style="width:auto;"> Center Lock</label>
+        <label style="font-weight:normal;"><input type="checkbox" name="h_lock" id="dc-f-h-lock" style="width:auto;"> H Lock</label>
+      </div>
+
+      <label>Salesman</label>
+      <input type="text" name="salesman" id="dc-f-salesman">
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;"><label>Sale Bill No.</label><input type="text" name="sale_bill_no" id="dc-f-sale-bill-no"></div>
+        <div style="flex:1;"><label>Sale Value</label><input type="number" step="0.01" name="sale_value" id="dc-f-sale-value" value="0"></div>
+      </div>
+
+      <label>Remarks (1)</label>
+      <input type="text" name="remarks1" id="dc-f-remarks1" placeholder="e.g. ALLOY, CEAT TYRE, ROOF CARRIER">
+      <label>Remarks (2)</label>
+      <input type="text" name="remarks2" id="dc-f-remarks2" placeholder="e.g. WIPER, MOTOR WOODEN FM REAR">
+
+      <div class="btn-row">
+        <button type="submit" class="btn-primary">💾 Save</button>
+        <a class="btn" href="#" onclick="dcToggleForm(); return false;">↺ Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form id="dc-action-form" method="post" style="display:none;"></form>
+
+<script>
+function fillFromVehicle() {
+  const sel = document.getElementById('vehicle-select');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('f-model').value = opt.dataset.model || '';
+  document.getElementById('f-colour').value = opt.dataset.colour || '';
+  document.getElementById('f-motor').value = opt.dataset.motor || '';
+  document.getElementById('f-controller').value = opt.dataset.controller || '';
+}
+
+const dcCreateUrl = "{{ url_for('delivery_challan_create') }}";
+const dcUpdateUrlTemplate = "{{ url_for('delivery_challan_update', challan_id=0) }}";
+const dcChallansById = {{ challans_by_id | tojson }};
+
+function dcToggleForm() {
+  const win = document.getElementById('dc-form-window');
+  const backdrop = document.getElementById('dc-modal-backdrop');
+  const showing = win.style.display !== 'none';
+  win.style.display = showing ? 'none' : 'block';
+  backdrop.style.display = showing ? 'none' : 'block';
+  document.body.style.overflow = showing ? '' : 'hidden';
+}
+
+function dcOpenAdd() {
+  const form = document.getElementById('dc-form');
+  form.action = dcCreateUrl;
+  document.getElementById('dc-form-title').textContent = 'E-Rickshaw Delivery Challan';
+  const dealerSel = document.getElementById('dc-f-dealer');
+  const vehicleSel = document.getElementById('vehicle-select');
+  dealerSel.disabled = false;
+  dealerSel.required = true;
+  vehicleSel.disabled = false;
+  vehicleSel.required = true;
+  // Remove any chassis option that was injected for editing a past challan
+  // (it belongs to that challan, not available for a fresh one).
+  vehicleSel.querySelectorAll('option.dc-injected-option').forEach(o => o.remove());
+  document.getElementById('dc-dealer-locked-note').style.display = 'none';
+  form.reset();
+  document.getElementById('dc-f-challan-no').value = "{{ suggested_challan_no }}";
+  document.getElementById('dc-f-date').value = "{{ today_iso }}";
+  document.getElementById('f-model').value = '';
+  document.getElementById('f-colour').value = '';
+  document.getElementById('f-motor').value = '';
+  document.getElementById('f-controller').value = '';
+}
+
+function dcOpenEdit(id) {
+  const c = dcChallansById[id];
+  if (!c) { alert('Could not load this challan for editing.'); return; }
+  const form = document.getElementById('dc-form');
+  form.action = dcUpdateUrlTemplate.replace('/0/update', '/' + id + '/update');
+  document.getElementById('dc-form-title').textContent = 'Delivery Challan — Modify (' + (c.challan_no || id) + ')';
+
+  const dealerSel = document.getElementById('dc-f-dealer');
+  const vehicleSel = document.getElementById('vehicle-select');
+  const lockedNote = document.getElementById('dc-dealer-locked-note');
+
+  if (c.invoiced) {
+    // A Tax Invoice already exists against this challan — its chassis/dealer
+    // snapshot is baked into that invoice, so changing them here would
+    // desync the two records. Lock the fields in that case only.
+    dealerSel.disabled = true;
+    dealerSel.required = false;
+    vehicleSel.disabled = true;
+    vehicleSel.required = false;
+    lockedNote.textContent = "Dealer/Chassis can't be changed — a Tax Invoice already exists for this Delivery Challan.";
+    lockedNote.style.display = '';
+  } else {
+    dealerSel.disabled = false;
+    dealerSel.required = true;
+    vehicleSel.disabled = false;
+    vehicleSel.required = true;
+    lockedNote.style.display = 'none';
+  }
+
+  // The currently-linked chassis has already moved past "Manufacturing"
+  // (that's the whole point of this challan), so it won't be in the
+  // dropdown's normal option list — inject it so it can stay selected.
+  vehicleSel.querySelectorAll('option.dc-injected-option').forEach(o => o.remove());
+  if (c.vehicle_id && !vehicleSel.querySelector('option[value="' + c.vehicle_id + '"]')) {
+    const opt = new Option(
+      (c.chassis_no || '') + ' — ' + (c.product_name || '') + ' (' + (c.colour || '') + ')',
+      c.vehicle_id
+    );
+    opt.className = 'dc-injected-option';
+    opt.dataset.model = c.product_name || '';
+    opt.dataset.motor = c.motor_no || '';
+    opt.dataset.controller = c.controller_no || '';
+    opt.dataset.colour = c.colour || '';
+    vehicleSel.appendChild(opt);
+  }
+  dealerSel.value = c.dealer_id || '';
+  vehicleSel.value = c.vehicle_id || '';
+
+  document.getElementById('dc-f-challan-no').value = c.challan_no || '';
+  document.getElementById('dc-f-date').value = c.date || '';
+  document.getElementById('f-model').value = c.product_name || '';
+  document.getElementById('f-colour').value = c.colour || '';
+  document.getElementById('f-motor').value = c.motor_no || '';
+  document.getElementById('f-controller').value = c.controller_no || '';
+  document.getElementById('dc-f-destination').value = c.destination || '';
+  document.getElementById('dc-f-battery-maker').value = c.battery_maker || '';
+  document.getElementById('dc-f-battery1').value = c.battery_no1 || '';
+  document.getElementById('dc-f-battery2').value = c.battery_no2 || '';
+  document.getElementById('dc-f-battery3').value = c.battery_no3 || '';
+  document.getElementById('dc-f-battery4').value = c.battery_no4 || '';
+  document.getElementById('dc-f-toolkit').checked = !!c.toolkit;
+  document.getElementById('dc-f-jack').checked = !!c.jack;
+  document.getElementById('dc-f-charger').checked = !!c.charger;
+  document.getElementById('dc-f-mat').checked = !!c.mat;
+  document.getElementById('dc-f-stapney').checked = !!c.stapney;
+  document.getElementById('dc-f-front-glass').checked = !!c.front_glass;
+  document.getElementById('dc-f-center-lock').checked = !!c.center_lock;
+  document.getElementById('dc-f-h-lock').checked = !!c.h_lock;
+  document.getElementById('dc-f-salesman').value = c.salesman || '';
+  document.getElementById('dc-f-sale-bill-no').value = c.sale_bill_no || '';
+  document.getElementById('dc-f-sale-value').value = c.sale_value || 0;
+  document.getElementById('dc-f-remarks1').value = c.remarks1 || '';
+  document.getElementById('dc-f-remarks2').value = c.remarks2 || '';
+}
+
+let dcSelectedRow = null;
+function dcSelectRow(tr) {
+  if (tr.classList.contains('empty')) return;
+  if (dcSelectedRow) dcSelectedRow.classList.remove('selected');
+  dcSelectedRow = tr;
+  tr.classList.add('selected');
+}
+
+function dcModify() {
+  if (!dcSelectedRow) { alert('Select a delivery challan row first.'); return; }
+  dcOpenEdit(dcSelectedRow.dataset.id);
+  dcToggleForm();
+}
+
+function dcPrint() {
+  if (!dcSelectedRow) { alert('Select a delivery challan row first.'); return; }
+  window.location.href = dcSelectedRow.dataset.printUrl;
+}
+
+function dcDelete() {
+  if (!dcSelectedRow) { alert('Select a delivery challan row first.'); return; }
+  if (!confirm('Delete this challan? Chassis returns to Manufacturing.')) return;
+  const f = document.getElementById('dc-action-form');
+  f.action = dcSelectedRow.dataset.deleteUrl;
+  f.submit();
+}
+
+function dcCancelToggle() {
+  if (!dcSelectedRow) { alert('Select a delivery challan row first.'); return; }
+  const f = document.getElementById('dc-action-form');
+  f.action = dcSelectedRow.dataset.cancelUrl;
+  f.submit();
+}
+
+function dcFilter() {
+  const q = document.getElementById('dc-search').value.trim().toLowerCase();
+  document.querySelectorAll('#dc-table tbody tr').forEach(tr => {
+    if (tr.classList.contains('empty')) return;
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// Arriving from Reports > Delivery Challan Register's double-click-to-edit
+// (?edit=<id>) jumps straight into the edit popup for that challan.
+(function dcOpenFromQueryString() {
+  const params = new URLSearchParams(window.location.search);
+  const editId = params.get('edit');
+  if (!editId || !dcChallansById[editId]) return;
+  const row = document.querySelector('#dc-table tbody tr[data-id="' + editId + '"]');
+  if (row) dcSelectRow(row);
+  dcOpenEdit(editId);
+  dcToggleForm();
+})();
+</script>
+{% endblock %}

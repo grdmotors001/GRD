@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dialog.css') }}">
+{% endblock %}
+{% block content %}
+
+<!-- Popup #1: "Stock Ledger" chooser -- mirrors the legacy desktop dialog -->
+<div class="dlg-window">
+  <div class="dlg-titlebar">
+    <span>&#128203; Stock Ledger</span>
+    <a href="{{ url_for('dashboard') }}" class="x">&#10005;</a>
+  </div>
+  <div class="dlg-body">
+    <form method="get" action="{{ url_for('custom_ledger') }}" style="display:flex; gap:26px; flex-wrap:wrap; align-items:flex-start;">
+      <div class="dlg-filter-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+        <label><input type="radio" name="view" value="trial_balance" {% if view == 'trial_balance' %}checked{% endif %}> Trial Balance</label>
+        <label><input type="radio" name="view" value="account_statement" {% if view == 'account_statement' %}checked{% endif %}> Account Statement</label>
+        <label><input type="radio" name="view" value="receivable" {% if view == 'receivable' %}checked{% endif %}> Receivable Report</label>
+        <label><input type="radio" name="view" value="day_book" {% if view == 'day_book' %}checked{% endif %}> Day Book Entry</label>
+      </div>
+
+      <div style="min-width:220px;">
+        <label style="font-weight:bold; font-size:12.5px;">Period From</label><br>
+        <input type="date" name="from" value="{{ from_date }}">
+        <br><br>
+        <label style="font-weight:bold; font-size:12.5px;">Period To</label><br>
+        <input type="date" name="to" value="{{ to_date }}">
+      </div>
+
+      <div style="min-width:240px;">
+        <label style="font-weight:bold; font-size:12.5px;">Account Head (Dealer)</label><br>
+        <select name="dealer_id">
+          <option value="">-- Select Dealer --</option>
+          {% for d in dealers %}
+          <option value="{{ d.id }}" {% if selected_dealer_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+        <p style="color:#888; font-size:11px; margin-top:6px;">Only used by Account Statement.</p>
+      </div>
+
+      <div style="align-self:flex-end;">
+        <button type="submit" class="btn-primary">&#10003; Okay</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if view == 'account_statement' %}
+<div class="panel">
+  <h3 style="margin-top:0;">Account Statement{% if selected_dealer %} — {{ selected_dealer.name }}{% endif %}</h3>
+  <p style="color:#666; font-size:12px;">Each Tax Invoice posts a Debit to <b>SALE</b> for the full bill amount; money received against it
+     (financed via a Financer, or paid directly) posts a Credit to <b>CASH</b>. Day Book entries against this dealer are included too.
+     Balance is shown Cr/Dr the same way as the original — a Credit balance normally decreases with each sale and increases with each payment.</p>
+  {% if not selected_dealer_id %}
+  <p style="color:#888;">Choose a dealer above and click Okay to see their account statement.</p>
+  {% else %}
+  <table class="grid">
+    <thead><tr><th>Date</th><th>Vr.Type</th><th>Doc.No.</th><th>A/c Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>D/C</th></tr></thead>
+    <tbody>
+      <tr><td colspan="6" style="font-weight:bold;">** Opening Balance **</td><td>0.00</td><td></td></tr>
+      {% for e in events %}
+      <tr>
+        <td>{{ e.date.strftime('%d/%m/%Y') if e.date else '' }}</td>
+        <td>{{ e.vr_type }}</td>
+        <td>{{ e.doc_no }}</td>
+        <td>{{ e.account }}</td>
+        <td>{{ '%.2f'|format(e.debit) if e.debit else '' }}</td>
+        <td>{{ '%.2f'|format(e.credit) if e.credit else '' }}</td>
+        <td>{{ '%.2f'|format(e.balance) }}</td>
+        <td>{{ e.dc }}</td>
+      </tr>
+      {% if e.lines %}
+      <tr>
+        <td colspan="3"></td>
+        <td colspan="5" style="color:#444; font-style:italic; padding-top:0;">
+          {% for line in e.lines %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+        </td>
+      </tr>
+      {% endif %}
+      {% else %}
+      <tr><td colspan="8" style="color:#888;">No transactions for this dealer in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+
+{% elif view == 'trial_balance' %}
+<div class="panel">
+  <h3 style="margin-top:0;">Trial Balance</h3>
+  <p style="color:#888;">Trial Balance isn't built yet in this web app — let us know if you'd like it added next.</p>
+</div>
+
+{% elif view == 'receivable' %}
+<div class="panel">
+  <h3 style="margin-top:0;">Receivable Report</h3>
+  <p style="color:#666; font-size:12px;">This already exists as its own report.</p>
+  <a class="btn btn-primary" href="{{ url_for('custom_payment_receivable_report') }}">Open Payment Rec'able Report &rarr;</a>
+</div>
+
+{% elif view == 'day_book' %}
+<!-- Popup #2: "Day Book" list -->
+<div class="dlg-window">
+  <div class="dlg-titlebar">
+    <span>&#128179; Day Book</span>
+    <a href="{{ url_for('custom_ledger') }}" class="x">&#10005;</a>
+  </div>
+  <div class="dlg-body">
+    <div class="dlg-toolbar">
+      <div class="search-field">
+        <label>Search</label>
+        <form method="get" action="{{ url_for('custom_ledger') }}" style="display:flex; gap:6px;">
+          <input type="hidden" name="view" value="day_book">
+          <input type="text" name="search" value="{{ day_book_search }}">
+          <button type="submit">Search</button>
+        </form>
+      </div>
+      <div class="dlg-toolbar-btns">
+        <button type="button" class="dlg-btn" onclick="dbOpenForm()">&#10133; Add</button>
+        <a class="dlg-btn exit" href="{{ url_for('custom_ledger') }}">&#8617; Exit</a>
+      </div>
+    </div>
+
+    <div class="dlg-table-wrap">
+      <table class="dlg-table">
+        <thead>
+          <tr><th>Date</th><th>Vr.No.</th><th>Party Name</th><th>Debit Amt.</th><th>Credit Amount</th><th>Narration</th><th style="width:90px;">Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for e in day_book_entries %}
+          <tr>
+            <td>{{ e.date.strftime('%d/%m/%Y') if e.date else '' }}</td>
+            <td>{{ e.vr_no }}</td>
+            <td>{{ e.dealer_name }}</td>
+            <td>{{ '%.2f'|format(e.debit_paid) if e.debit_paid else '' }}</td>
+            <td>{{ '%.2f'|format(e.credit_received) if e.credit_received else '' }}</td>
+            <td>{{ e.narration or '' }}</td>
+            <td class="row-actions">
+              <button type="button" class="edit-btn" data-id="{{ e.id }}"
+                data-date="{{ e.date.isoformat() if e.date else '' }}"
+                data-dealer_name="{{ e.dealer_name }}"
+                data-credit_received="{{ e.credit_received or 0 }}"
+                data-debit_paid="{{ e.debit_paid or 0 }}"
+                data-narration="{{ e.narration or '' }}">Modify</button>
+              <form method="post" action="{{ url_for('day_book_delete', row_id=e.id) }}" style="display:inline;" onsubmit="return confirm('Delete this Day Book entry?');">
+                <input type="hidden" name="return_to" value="{{ url_for('custom_ledger', view='day_book') }}">
+                <button type="submit" class="btn-danger">Del</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr class="empty"><td colspan="7">No Day Book entries yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Popup #3: "Day Book" entry form -- opens on top of the list, like the desktop app -->
+<div class="dlg-window" id="db-form-window" style="display:none;">
+  <div class="dlg-titlebar">
+    <span>&#128179; Day Book</span>
+    <a href="#" class="x" onclick="dbCloseForm(); return false;">&#10005;</a>
+  </div>
+  <div class="dlg-body">
+    <form method="post" action="{{ url_for('custom_day_book') }}" class="stack" style="max-width:480px;">
+      <input type="hidden" name="id" id="field-id">
+      <input type="hidden" name="return_to" value="{{ url_for('custom_ledger', view='day_book') }}">
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>Date</label>
+          <input type="date" name="date" id="field-date" value="{{ today }}">
+        </div>
+        <div style="flex:1;">
+          <label>Vr.No.</label>
+          <input type="text" id="field-vr_no" value="{{ next_vr_no }}" readonly style="background:#eee;">
+        </div>
+      </div>
+
+      <label>Dealer Name</label>
+      <input type="text" name="dealer_name" id="field-dealer_name" list="dealer-list" required>
+      <datalist id="dealer-list">{% for n in dealer_names %}<option value="{{ n }}">{% endfor %}</datalist>
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>Credit (Received)</label>
+          <input type="number" step="0.01" name="credit_received" id="field-credit_received" value="0">
+        </div>
+        <div style="flex:1;">
+          <label>Debit (Paid)</label>
+          <input type="number" step="0.01" name="debit_paid" id="field-debit_paid" value="0">
+        </div>
+      </div>
+
+      <label>Narration</label>
+      <textarea name="narration" id="field-narration" rows="3" placeholder="e.g. UPI 1525, NEFT 1525, V C NO-2939 (RAJ KUMAR)"></textarea>
+
+      <div class="btn-row">
+        <button type="submit" class="btn-primary">&#128190; Save</button>
+        <a class="btn" href="#" onclick="dbCloseForm(); return false;">&#8621; Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function dbResetForm() {
+  document.getElementById('field-id').value = '';
+  document.getElementById('field-date').value = '{{ today }}';
+  document.getElementById('field-vr_no').value = '{{ next_vr_no }}';
+  document.getElementById('field-dealer_name').value = '';
+  document.getElementById('field-credit_received').value = '0';
+  document.getElementById('field-debit_paid').value = '0';
+  document.getElementById('field-narration').value = '';
+}
+function dbOpenForm() {
+  dbResetForm();
+  var win = document.getElementById('db-form-window');
+  win.style.display = 'block';
+  win.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function dbCloseForm() {
+  document.getElementById('db-form-window').style.display = 'none';
+}
+document.querySelectorAll('.edit-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.getElementById('field-id').value = btn.dataset.id;
+    document.getElementById('field-date').value = btn.dataset.date;
+    document.getElementById('field-vr_no').value = '(unchanged)';
+    document.getElementById('field-dealer_name').value = btn.dataset.dealer_name;
+    document.getElementById('field-credit_received').value = btn.dataset.credit_received;
+    document.getElementById('field-debit_paid').value = btn.dataset.debit_paid;
+    document.getElementById('field-narration').value = btn.dataset.narration;
+    var win = document.getElementById('db-form-window');
+    win.style.display = 'block';
+    win.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+});
+</script>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="two-col">
+  <div class="panel" style="flex:1;">
+    <h3 style="margin-top:0;">Journal Stock</h3>
+    <p style="color:#666; font-size:12px;">Manual stock correction — for anything that doesn't come from a Purchase Bill, Production Voucher, or Delivery Challan (e.g. fixing a stock-take discrepancy). Use a positive Qty to add stock, negative to remove it.</p>
+    <form class="stack" method="post" action="{{ url_for('journal_stock_create') }}">
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>Vou. No.</label>
+          <input type="text" name="vou_no" value="{{ suggested_vou_no }}">
+        </div>
+        <div style="flex:1;">
+          <label>Date</label>
+          <input type="date" name="date" value="{{ today_iso }}">
+        </div>
+      </div>
+
+      <label>Item Name</label>
+      <input type="text" name="item_name" list="item-list" required>
+      <datalist id="item-list">{% for it in all_items %}<option value="{{ it.name }}">{% endfor %}</datalist>
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>Item Type</label>
+          <select name="item_type">
+            <option value="R">Raw Material</option>
+            <option value="F">Finished Good</option>
+          </select>
+        </div>
+        <div style="flex:1;">
+          <label>Qty <span style="font-weight:normal; color:#888;">(+ in / - out)</span></label>
+          <input type="number" step="0.01" name="qty" required>
+        </div>
+      </div>
+
+      <label>Reason</label>
+      <input type="text" name="reason" placeholder="e.g. Physical stock-take correction">
+
+      <div class="btn-row">
+        <button type="submit" class="btn-primary">💾 Save</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="panel" style="flex:1.4;">
+    <table class="grid">
+      <thead><tr><th>Date</th><th>Vou.No.</th><th>Item Name</th><th>Type</th><th>Qty</th><th>Reason</th><th style="width:60px;"></th></tr></thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td>{{ r.date.strftime('%d/%m/%Y') if r.date else '' }}</td>
+          <td>{{ r.vou_no }}</td>
+          <td>{{ r.item_name }}</td>
+          <td>{{ 'Raw' if r.item_type == 'R' else 'Finished' }}</td>
+          <td style="color: {{ 'green' if r.qty >= 0 else '#a33' }}; font-weight:bold;">{{ '+' if r.qty >= 0 else '' }}{{ r.qty }}</td>
+          <td>{{ r.reason or '' }}</td>
+          <td class="row-actions">
+            <form method="post" action="{{ url_for('journal_stock_delete', record_id=r.id) }}" onsubmit="return confirm('Delete this entry?');">
+              <button type="submit" class="btn-danger">Del</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="color:#888;">No journal stock entries yet — add one on the left.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

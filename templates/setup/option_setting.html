@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel" style="max-width:900px; margin:0 auto;">
+  <h3 style="margin-top:0;">User wise Option Setting</h3>
+  <p style="color:#888; font-size:12px;">
+    Choose which menu items each user is allowed to access. Super users always have full access,
+    regardless of what's checked here. <strong>Note:</strong> this app doesn't have a login/session
+    system yet, so this setting is stored correctly but isn't enforced on any page yet.
+  </p>
+
+  {% if not users %}
+    <p style="color:#888;">No users yet — add one in <a href="{{ url_for('custom_user') }}">User Master</a> first.</p>
+  {% else %}
+  <form method="get" action="{{ url_for('custom_option_setting') }}" class="stack" style="max-width:320px;">
+    <label>User</label>
+    <select name="user_id" onchange="this.form.submit()">
+      {% for u in users %}
+        <option value="{{ u.id }}" {% if selected_user and selected_user.id == u.id %}selected{% endif %}>
+          {{ u.username }}{{ ' (Super User)' if u.is_super_user else '' }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+
+  {% if selected_user %}
+  <form method="post" action="{{ url_for('custom_option_setting') }}" style="margin-top:18px;">
+    <input type="hidden" name="user_id" value="{{ selected_user.id }}">
+
+    {% if selected_user.is_super_user %}
+    <p style="background:#fdf3d9; border:1px solid #e8b93a; border-radius:6px; padding:10px 14px; font-size:13px;">
+      '{{ selected_user.username }}' is a Super User — always has access to every module, regardless of the checkboxes below.
+    </p>
+    {% endif %}
+
+    {% for category, items in MENU.items() %}
+    <h4 style="margin-bottom:6px;">{{ category }}</h4>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:6px 16px; margin-bottom:16px;">
+      {% for item in items %}
+      <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+        <input type="checkbox" name="modules" value="{{ item.key }}"
+          {% if item.key in selected_keys %}checked{% endif %}>
+        {{ item.label }}
+      </label>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+    <div class="btn-row">
+      <button type="submit" class="btn-primary">💾 Save Access for '{{ selected_user.username }}'</button>
+    </div>
+  </form>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

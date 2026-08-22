@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="two-col">
+  <div class="panel" style="flex:1;">
+    <h3 style="margin-top:0;">User Master</h3>
+    <form class="stack" method="post">
+      <input type="hidden" name="id">
+      <label>Username</label>
+      <input type="text" name="username" required>
+      <label>Password</label>
+      <input type="password" name="password" placeholder="required for new users">
+      <label><input type="checkbox" name="is_super_user" style="width:auto;"> Super User</label>
+      <label>Permissions</label>
+      <input type="text" name="permissions" placeholder="e.g. Y Y">
+      <div class="btn-row">
+        <button type="submit" class="btn-primary">💾 Save</button>
+      </div>
+    </form>
+    <p style="color:#888; font-size:11.5px; margin-top:10px;">
+      Note: unlike the original software, passwords here are hashed (not stored in plain text).
+    </p>
+  </div>
+
+  <div class="panel" style="flex:1.4;">
+    <table class="grid">
+      <thead>
+        <tr><th>Username</th><th>Super User</th><th>Permissions</th><th style="width:80px;">Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.username }}</td>
+          <td>{{ 'Yes' if u.is_super_user else 'No' }}</td>
+          <td>{{ u.permissions or '' }}</td>
+          <td class="row-actions">
+            <form method="post" action="{{ url_for('user_delete', user_id=u.id) }}" style="display:inline;" onsubmit="return confirm('Delete this user?');">
+              <button type="submit" class="btn-danger">Del</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="color:#888;">No users yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>eBill (1.0)</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body class="login-body">
+
+  <div class="titlebar">eBill (1.0)</div>
+
+  <div class="login-desktop">
+    <div class="watermark-grid" id="watermarkGrid"></div>
+
+    <div class="login-dialog">
+      <div class="login-dialog-title">
+        <span class="lbl">🔒 Password</span>
+        <span class="x">&#10005;</span>
+      </div>
+      <form method="post" class="login-dialog-body">
+        <div class="login-brand">
+          <div class="login-logo">
+            <div>
+              <div><span class="u1">U</span><span class="rest">NIQUE</span></div>
+              <div class="rest2">COMPUTERS</div>
+            </div>
+          </div>
+          <div class="login-phone">9780151215</div>
+          <div class="login-ebill-box"><span>eBill</span></div>
+        </div>
+
+        <div class="login-form">
+          {% if error %}
+            <div class="flash flash-error" style="margin:0 0 12px 0;">{{ error }}</div>
+          {% endif %}
+          <div class="login-row">
+            <div class="login-icon-cell">🖱️</div>
+            <div class="login-fields">
+              <label for="userid">User ID</label>
+              <input id="userid" name="userid" type="text" value="{{ userid or 'admin' }}" autofocus>
+            </div>
+          </div>
+          <div class="login-row">
+            <div class="login-icon-cell"></div>
+            <div class="login-fields">
+              <label for="password">Password</label>
+              <input id="password" name="password" type="password" value="">
+            </div>
+          </div>
+          <div class="login-btn-row">
+            <button type="submit" class="btn login-btn">Login</button>
+            <a href="#" class="btn login-exit" onclick="window.close(); return false;">Exit</a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="statusbar login-statusbar">
+    <div>Record: 1/1 &nbsp;&nbsp; Exclusive</div>
+    <div>eBill (1.0) — Web Edition</div>
+  </div>
+
+<script>
+  const grid = document.getElementById('watermarkGrid');
+  for (let i = 0; i < 36; i++) {
+    const s = document.createElement('span');
+    s.innerHTML = 'UNIQUE<br>COMPUTERS';
+    grid.appendChild(s);
+  }
+</script>
+</body>
+</html>

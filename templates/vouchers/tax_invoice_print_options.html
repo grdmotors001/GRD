@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel" style="max-width:640px; margin:0 auto;">
+  <h3 style="margin-top:0;">Printing</h3>
+
+  <div style="background:#fdeee4; border:1.5px solid #d99a6c; border-radius:6px; padding:16px 20px; margin-bottom:20px;">
+    <table style="width:100%; font-size:14px;">
+      <tr><td style="padding:4px 0; width:110px; color:#333;">Bill No.</td><td style="font-weight:bold;">{{ ti.bill_no }}</td></tr>
+      <tr><td style="padding:4px 0; color:#333;">Buyer Name</td><td style="font-weight:bold; color:#1a7a1a;">{{ ti.buyer_name }}</td></tr>
+      <tr><td style="padding:4px 0; color:#333;">Vehicle</td><td style="font-weight:bold; color:#c81e2c;">{{ ti.product_name }}</td></tr>
+      <tr><td style="padding:4px 0; color:#333;">Chassis No.</td><td style="font-weight:bold; color:#1a4fc8;">{{ ti.chassis_no }}</td></tr>
+    </table>
+  </div>
+
+  {% macro doc_btn(key) %}
+    {% set meta = doc_types[key] %}
+    {% if meta.endpoint == 'tax_invoice_print' %}
+      {% set href = url_for('tax_invoice_print', invoice_id=ti.id, doc=key) %}
+    {% else %}
+      {% set href = url_for(meta.endpoint, invoice_id=ti.id) %}
+    {% endif %}
+    {% if meta.ready %}
+    <a class="btn-primary" style="display:block; text-align:center; padding:13px; text-decoration:none; margin-bottom:12px;"
+       href="{{ href }}" target="_blank">
+      &#128424; {{ meta.title }}
+    </a>
+    {% else %}
+    <a class="btn" style="display:block; text-align:center; padding:13px; text-decoration:none; margin-bottom:12px; opacity:.6;"
+       href="{{ href }}"
+       title="Format not set up yet — send a sample and it'll be added">
+      &#128424; {{ meta.title }} <span style="font-size:11px; display:block;">(format not set up yet)</span>
+    </a>
+    {% endif %}
+  {% endmacro %}
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px;">
+    <div>
+      {{ doc_btn("invoice") }}
+      {{ doc_btn("proforma") }}
+      {{ doc_btn("manufacturing") }}
+    </div>
+    <div>
+      {{ doc_btn("affidavit") }}
+      {{ doc_btn("undertaking") }}
+      {{ doc_btn("form22") }}
+    </div>
+  </div>
+
+  <a class="btn" style="display:block; text-align:center; padding:13px; text-decoration:none; margin-bottom:12px;"
+     href="{{ url_for('tax_invoice_upload_code', invoice_id=ti.id) }}">
+    &#128190; Generate Upload Code (.txt)
+  </a>
+
+  <div class="btn-row" style="margin-top:10px;">
+    <a class="btn" href="{{ url_for('custom_tax_invoice') }}">Exit</a>
+  </div>
+</div>
+{% endblock %}

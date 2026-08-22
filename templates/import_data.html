@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel" style="max-width:700px; margin:0 auto;">
+  <h3 style="margin-top:0;">Import Old Data</h3>
+  <p>Upload either the Excel export of your old eBill database (same layout as <code>Book1.xlsx</code>),
+     or the original Access <code>.mdb</code>/<code>.accdb</code> file directly.
+     This loads: Dealers, Products, Colours, Battery Makers, Financers, Mechanics, Production Formula (BOM),
+     Vehicles/Chassis, Users, and Company info.</p>
+  <p style="color:#888; font-size:12px;">
+     Direct Access import tries two things automatically: on <strong>Windows</strong>, the
+     Microsoft Access ODBC driver via <code>pyodbc</code> (<code>pip install pyodbc</code>, plus the free
+     "Microsoft Access Database Engine Redistributable" from Microsoft — match its 32/64-bit
+     to your Python install); on <strong>Linux/Mac</strong>, the <code>mdbtools</code> command-line
+     tools. If neither is available you'll get a clear error explaining both options, or you can
+     export the Access tables to Excel and upload that instead.
+  </p>
+
+  <form class="stack" method="post" enctype="multipart/form-data">
+    <label>File (.xlsx, .mdb, or .accdb)</label>
+    <input type="file" name="data_file" accept=".xlsx,.mdb,.accdb" required>
+    <label>Access database password (only needed for a password-protected .mdb/.accdb — leave blank for .xlsx)</label>
+    <input type="password" name="mdb_password" autocomplete="off" placeholder="Leave blank if the file has no password">
+    <div class="btn-row">
+      <button type="submit" class="btn-primary">⬆ Upload &amp; Import</button>
+    </div>
+  </form>
+
+  <h4>Current record counts</h4>
+  <table class="grid">
+    <tbody>
+      {% for k, v in counts.items() %}
+      <tr><td>{{ k }}</td><td>{{ v }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

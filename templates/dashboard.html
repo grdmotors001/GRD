@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="two-col">
+
+  <div class="panel" style="flex: 1.3;">
+    {% for category, items in MENU.items() %}
+      <h4>{{ category }}</h4>
+      <div class="menu-grid">
+        {% for item in items %}
+          <a class="cat-{{ category|lower }}" href="{{ url_for('module', key=item.key) }}">{{ item.label }}</a>
+        {% endfor %}
+      </div>
+    {% endfor %}
+    <div class="menu-grid" style="margin-top:6px;">
+      <a class="cat-exit" href="{{ url_for('logout') }}">EXIT</a>
+    </div>
+  </div>
+
+  <div class="panel" style="flex: 1;">
+    <table class="grid">
+      <thead>
+        <tr><th>Chassis No.</th><th>Colour / Dealer</th><th>Model</th></tr>
+      </thead>
+      <tbody>
+        <tr class="section-header"><td colspan="3">Manufacturing</td></tr>
+        {% for v in manufacturing %}
+        <tr><td>{{ v.chassis_no }}</td><td>{{ v.colour }}</td><td>{{ v.model_name }}</td></tr>
+        {% else %}
+        <tr><td colspan="3" style="color:#888;">No records yet — import old data or add a Production Voucher.</td></tr>
+        {% endfor %}
+
+        <tr class="section-header"><td colspan="3">Delivery Challan</td></tr>
+        {% for v in delivery_challan %}
+        <tr><td>{{ v.chassis_no }}</td><td>{{ v.dealer_name }}</td><td>{{ v.model_name }}</td></tr>
+        {% else %}
+        <tr><td colspan="3" style="color:#888;">No records yet.</td></tr>
+        {% endfor %}
+
+        <tr class="section-header"><td colspan="3">Tax Invoice</td></tr>
+        {% for v in tax_invoice %}
+        <tr><td>{{ v.chassis_no }}</td><td>{{ v.dealer_name }}</td><td>{{ v.model_name }}</td></tr>
+        {% else %}
+        <tr><td colspan="3" style="color:#888;">No records yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="two-col">
+  <div class="panel" style="flex:1;">
+    <h3 style="margin-top:0;">Dealer Master</h3>
+    <form class="stack" method="post">
+      <input type="hidden" name="id" value="{{ editing.id if editing else '' }}">
+      <label>Name</label>
+      <input type="text" name="name" value="{{ editing.name if editing else '' }}" required>
+
+      <label>Address</label>
+      <input type="text" name="address1" value="{{ editing.address1 if editing else '' }}">
+      <input type="text" name="address2" value="{{ editing.address2 if editing else '' }}" style="margin-top:4px;">
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>Mobile No.</label>
+          <input type="text" name="mobile" value="{{ editing.mobile if editing else '' }}">
+        </div>
+        <div style="flex:1;">
+          <label>GSTIN</label>
+          <input type="text" name="gst_no" value="{{ editing.gst_no if editing else '' }}">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>State</label>
+          <input type="text" name="state" value="{{ editing.state if editing else '' }}">
+        </div>
+        <div style="flex:1;">
+          <label>PAN</label>
+          <input type="text" name="pan" value="{{ editing.pan if editing else '' }}">
+        </div>
+      </div>
+
+      <label>Salesman</label>
+      <input type="text" name="salesman" value="{{ editing.salesman if editing else '' }}">
+
+      <div style="display:flex; gap:10px; align-items:flex-end;">
+        <div style="flex:1;">
+          <label>Code</label>
+          <input type="text" name="code" value="{{ editing.code if editing else suggested_code }}">
+        </div>
+        <div style="flex:1;">
+          <label><input type="checkbox" name="blocked" {% if editing and editing.blocked %}checked{% endif %} style="width:auto;"> Block (Y/N)</label>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>Login ID</label>
+          <input type="text" name="login_id" value="{{ editing.login_id if editing else '' }}">
+        </div>
+        <div style="flex:1;">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="{{ 'leave blank to keep existing' if editing else '' }}">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="submit" class="btn-primary">💾 Save</button>
+        <a class="btn" href="{{ url_for('custom_dealer') }}">↺ Cancel</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="panel" style="flex:1.4;">
+    <table class="grid">
+      <thead>
+        <tr><th>Code</th><th>Name</th><th>Address</th><th>Mobile</th><th>Salesman</th><th style="width:110px;">Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for d in dealers %}
+        <tr>
+          <td>{{ d.code }}</td>
+          <td>{{ d.name }}</td>
+          <td>{{ d.address1 or '' }}</td>
+          <td>{{ d.mobile or '' }}</td>
+          <td>{{ d.salesman or '' }}</td>
+          <td class="row-actions">
+            <a class="btn" href="{{ url_for('custom_dealer', edit=d.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('dealer_delete', dealer_id=d.id) }}" style="display:inline;" onsubmit="return confirm('Delete this dealer?');">
+              <button type="submit" class="btn-danger">Del</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="color:#888;">No dealers yet — add one on the left, or import old data.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

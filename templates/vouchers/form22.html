@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Form 22 - {{ ti.chassis_no }}</title>
+<style>
+  body { font-family: 'Times New Roman', Georgia, serif; background: #eee; margin: 0; padding: 20px; }
+  .sheet { max-width: 800px; margin: 0 auto; background: #fff; border: 1px solid #999; padding: 30px 40px; font-size: 13.5px; line-height: 1.55; }
+  .no-print { text-align: center; margin-bottom: 14px; font-family: Arial, sans-serif; }
+  @media print { .no-print { display: none; } body { background: #fff; padding: 0; } .sheet { border: none; margin: 0; } }
+  h1 { text-align: center; font-size: 17px; margin: 0 0 2px 0; }
+  .ref { text-align: center; font-size: 12px; margin-bottom: 14px; }
+  .title2 { text-align: center; font-weight: bold; font-size: 16px; margin: 10px 0 2px 0; }
+  .sub { text-align: center; font-size: 13px; margin-bottom: 4px; }
+  .issuedby { text-align: center; font-size: 12.5px; font-style: italic; margin-bottom: 18px; }
+  .cert-line { margin-bottom: 16px; }
+  ol.main { padding-left: 22px; }
+  ol.main > li { margin-bottom: 10px; }
+  .fill { border-bottom: 1px solid #333; padding: 0 4px; font-weight: bold; }
+  .note { font-size: 11.5px; color: #555; margin-left: 4px; }
+  table.emissions { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }
+  table.emissions th, table.emissions td { border: 1px solid #666; padding: 5px 7px; text-align: center; }
+  table.emissions th { background: #eee; }
+  .noise-block { margin-top: 8px; }
+  .sig-block { margin-top: 50px; text-align: right; font-size: 13px; }
+  .sig-caption { font-size: 11.5px; font-style: italic; text-align: center; margin-top: 4px; }
+  .notes { margin-top: 26px; font-size: 11px; color: #444; line-height: 1.5; }
+  .notes p { margin: 4px 0; }
+  .warn-box { background: #fdf3d9; border: 1px solid #e8b93a; border-radius: 4px; padding: 10px 14px; font-size: 12px; margin-bottom: 18px; }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button onclick="window.print()">🖨 Print / Save as PDF</button>
+  <a href="{{ url_for('tax_invoice_print_options', invoice_id=ti.id) }}">← Back</a>
+</div>
+
+<div class="sheet">
+
+  <div class="warn-box">
+    This is generated from Form 22 as published on parivahan.gov.in (Rule 47(1)(g), Central Motor
+    Vehicles Rules, 1989). Fields left blank below (Type Approval Certificate No., emission/noise
+    values) must be filled in from your model's actual test certificate before this is issued — they
+    are intentionally not guessed. Please verify against the current official form before use.
+  </div>
+
+  <h1>FORM 22</h1>
+  <div class="ref">FORM 22 [Refer rule 47(1)(g)]</div>
+
+  <div class="title2">ROAD-WORTHINESS CERTIFICATE</div>
+  <div class="sub">For Compliance to Emission and Noise Standards</div>
+  <div class="issuedby">(To be issued by the Manufacturer or Importer or Registered Association in case of E-rickshaw or E-cart, along with the vehicle)</div>
+
+  <div class="cert-line">It is certified that the following vehicle complies with the provisions of the Motor Vehicles Act, 1988, and the rules made thereunder:</div>
+
+  <ol class="main">
+    <li>Model/Commercial Name of the vehicle : <span class="fill">{{ ti.product_name }}</span></li>
+    <li>Chassis number : <span class="fill">{{ ti.chassis_no }}</span>
+      <div class="note">(Example: Vehicle Identification Number (VIN) or ATIN or PIN/Trailer Identification Number etc.)</div>
+    </li>
+    <li>Engine number (Motor number, in case of Battery-Operated Vehicles): <span class="fill">{{ ti.motor_no or '' }}</span></li>
+    <li>Applicable Emission norms : <span class="fill">NA (Battery Operated Vehicle)</span>
+      <div class="note">(Example: Bharat Stage-IV/VI /TREM-III /Equivalent, as permitted under the Act. Select NA for Battery Operated Vehicle)</div>
+    </li>
+    <li>
+      Emission, Sound Level for Horn and Pass-by noise values of the above vehicle model, obtained
+      during Type Approval Testing as per Central Motor Vehicle Rules, 1989 are given below:
+      <div style="margin-top:8px;">
+        (i) Type Approval certificate No. : <span class="fill">{{ product.type_approval_no if product and product.type_approval_no else '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'|safe }}</span><br>
+        (ii) Type of Fuel : <span class="fill">{{ (product.fuel_type if product and product.fuel_type else 'Battery/Electric') }}</span>
+      </div>
+
+      <table class="emissions">
+        <thead><tr><th>Sr. No.</th><th>Pollutant (as applicable)</th><th>Units (as applicable)</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td colspan="4" style="text-align:left; color:#666;">Not Applicable — Battery Operated Vehicle (no tailpipe emissions)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="noise-block">
+        (iv) Noise level (as applicable):<br>
+        (a) Horn (for all vehicles other than agricultural tractors and construction equipment vehicles) as installed on the vehicle:
+        <span class="fill">{{ product.horn_db if product and product.horn_db else '&nbsp;&nbsp;&nbsp;&nbsp;'|safe }}</span> dB(A);<br>
+        (b) Pass by or Bystander's position: <span class="fill">{{ product.pass_by_db if product and product.pass_by_db else '&nbsp;&nbsp;&nbsp;&nbsp;'|safe }}</span> dB(A);<br>
+        (c) Driver-perceived or Operator's ear level (as applicable for agricultural tractors and construction equipment vehicles): ______________ dB(A)
+      </div>
+    </li>
+  </ol>
+
+  <div class="sig-block">
+    ________________________________<br>
+    for {{ company.name if company else 'G.R.D. MOTORS' }}
+  </div>
+  <div class="sig-caption">(Facsimile Signature of Manufacturer or Importer or Registered Association, in case of E-rickshaw or E-cart)</div>
+
+  <div class="notes">
+    <p><b>Note 1:</b> This Form shall be issued with the signature of the manufacturer or importer or registered association, in case of E-rickshaw or E-cart duly printed in the Form itself by affixing facsimile signature in ink under the hand and seal, as applicable.</p>
+    <p><b>Note 2:</b> In case of multiple combinations, values pertaining to any one test result in the test report to be provided. For V2, V3 cases - average value of the test result in the test report to be provided.</p>
+    <p><b>Note 3:</b> While printing Form 22, the relevant pollutants in the Table as applicable for the subject vehicles may only be listed.</p>
+  </div>
+
+</div>
+</body>
+</html>

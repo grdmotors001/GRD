@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block extra_head %}
+<style>
+  .dcr-table tbody tr:hover td { background: #eef4fb; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="panel">
+  <h3 style="margin-top:0;">Delivery Challan Register</h3>
+  <form method="get" action="{{ filter_action }}" style="display:flex; gap:10px; align-items:flex-end; margin-bottom:14px;">
+    <input type="hidden" name="status" value="{{ status }}">
+    <div><label style="font-weight:bold; font-size:12.5px;">From</label><br><input type="date" name="from" value="{{ from_date }}"></div>
+    <div><label style="font-weight:bold; font-size:12.5px;">To</label><br><input type="date" name="to" value="{{ to_date }}"></div>
+    <div style="flex:1; min-width:180px;"><label style="font-weight:bold; font-size:12.5px;">🔍 Search</label><br>
+      <input type="text" name="search" value="{{ search }}" placeholder="Dealer / Chassis / Challan No..." style="width:100%;"></div>
+    <div><button type="submit">Search</button></div>
+    <div><a class="btn" href="{{ filter_action }}">Clear</a></div>
+    <div><a class="btn" href="{{ export_action }}?from={{ from_date }}&to={{ to_date }}&search={{ search }}">📊 Export Excel</a></div>
+  </form>
+
+  <div class="btn-row" style="margin-bottom:14px;">
+    <a class="btn {{ 'btn-primary' if status == 'all' else '' }}"
+       href="{{ filter_action }}?from={{ from_date }}&to={{ to_date }}&search={{ search }}">All</a>
+    <a class="btn {{ 'btn-primary' if status == 'sold' else '' }}"
+       href="{{ filter_action }}?from={{ from_date }}&to={{ to_date }}&search={{ search }}&status=sold">✅ Sold</a>
+    <a class="btn {{ 'btn-primary' if status == 'unsold' else '' }}"
+       href="{{ filter_action }}?from={{ from_date }}&to={{ to_date }}&search={{ search }}&status=unsold">⭕ Unsold</a>
+  </div>
+
+  <div style="overflow-x:auto;">
+  <table class="grid dcr-table" style="white-space:nowrap;">
+    <thead>
+      <tr>
+        <th>Date</th><th>Challan No.</th><th>Dealer Name</th><th>Product</th><th>Chassis No.</th>
+        <th>Colour</th><th>Other</th><th>Sale Value</th><th>Bill No. (if billed)</th><th>Salesman</th><th>Battery Make</th>
+        <th>Battery No.1</th><th>Battery No.2</th><th>Battery No.3</th><th>Battery No.4</th>
+        <th>Remarks1</th><th>Remarks2</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in challans %}
+      <tr style="cursor:pointer; {{ 'color:#aaa; text-decoration:line-through;' if c.cancelled else '' }}"
+          ondblclick="window.location='{{ url_for('custom_delivery_challan', edit=c.id) }}';"
+          title="Double-click to edit this Delivery Challan">
+        <td>{{ c.date.strftime('%d/%m/%Y') if c.date else '' }}</td>
+        <td>{{ c.challan_no }}</td>
+        <td>{{ c.dealer.name if c.dealer else '' }}</td>
+        <td>{{ c.product_name }}</td>
+        <td>{{ c.chassis_no }}</td>
+        <td>{{ c.colour or '' }}</td>
+        <td>{{ c.other or '' }}</td>
+        <td>{{ '%.2f'|format(c.sale_value) if c.sale_value else '' }}</td>
+        <td>{{ invoiced_bill_no.get(c.id) or c.sale_bill_no or '' }}</td>
+        <td>{{ c.salesman or '' }}</td>
+        <td>{{ c.battery_maker or '' }}</td>
+        <td>{{ c.battery_no1 or '' }}</td>
+        <td>{{ c.battery_no2 or '' }}</td>
+        <td>{{ c.battery_no3 or '' }}</td>
+        <td>{{ c.battery_no4 or '' }}</td>
+        <td>{{ c.remarks1 or '' }}</td>
+        <td>{{ c.remarks2 or '' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="16" style="color:#888;">No delivery challans in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

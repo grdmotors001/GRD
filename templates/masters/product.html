@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dialog.css') }}">
+{% endblock %}
+{% block content %}
+
+<div class="dlg-window" style="max-width:900px;">
+  <div class="dlg-titlebar">
+    <span>🖨 Product Master List</span>
+    <a href="{{ url_for('dashboard') }}" class="x">&#10005;</a>
+  </div>
+
+  <div class="dlg-toolbar">
+    <div class="search-field">
+      <label>Search</label>
+      <input type="text" id="pm-search" placeholder="Start typing an item name..." autocomplete="off" autofocus>
+    </div>
+    <div class="dlg-toolbar-btns">
+      <a href="#" class="dlg-btn" onclick="pmShowForm(null); return false;"><span class="ic">📄</span>Add</a>
+      <a href="#" class="dlg-btn" id="pm-modify-btn" onclick="pmModifySelected(); return false;"><span class="ic">✏️</span>Modify</a>
+      <a href="#" class="dlg-btn danger" id="pm-delete-btn" onclick="pmDeleteSelected(); return false;"><span class="ic">🗑</span>Delete</a>
+      <a href="#" class="dlg-btn" onclick="window.print(); return false;"><span class="ic">🖨</span>Print</a>
+      <a href="{{ url_for('dashboard') }}" class="dlg-btn exit"><span class="ic">⏏</span>Exit</a>
+    </div>
+  </div>
+
+  <div class="dlg-body">
+    <div class="dlg-table-wrap">
+      <table class="dlg-table" id="pm-table">
+        <thead>
+          <tr><th style="width:38%;">Product</th><th style="width:10%;">Unit</th><th style="width:10%;">F/R/O</th><th style="width:12%;">GST%</th><th style="width:20%;">HSN Code</th></tr>
+        </thead>
+        <tbody id="pm-tbody">
+          {% for p in products %}
+          <tr data-id="{{ p.id }}"
+              data-name="{{ p.name|lower }}"
+              data-fro="{{ p.fro or 'R' }}"
+              onclick="pmSelectRow(this)"
+              ondblclick="pmShowForm({{ p.id }})">
+            <td>{{ p.name }}</td>
+            <td>{{ p.unit }}</td>
+            <td>{{ p.fro or 'R' }}</td>
+            <td>{{ '%.2f'|format(p.gst_rate or 0) }}</td>
+            <td>{{ p.hsn_code or '' }}</td>
+          </tr>
+          {% else %}
+          <tr class="empty"><td colspan="5">No products yet — click Add, or import old data.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="dlg-filter-row">
+      <label><input type="radio" name="pm-filter" value="All" checked onchange="pmApplyFilter()"> All</label>
+      <label><input type="radio" name="pm-filter" value="R" onchange="pmApplyFilter()"> Raw</label>
+      <label><input type="radio" name="pm-filter" value="F" onchange="pmApplyFilter()"> Finished</label>
+      <label><input type="radio" name="pm-filter" value="O" onchange="pmApplyFilter()"> Other</label>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Modify popup -->
+<div id="pm-form-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:50; align-items:center; justify-content:center;">
+  <div class="dlg-window" style="width:420px; margin:0;">
+    <div class="dlg-titlebar">
+      <span id="pm-form-title">Add Product</span>
+      <a href="#" class="x" onclick="pmHideForm(); return false;">&#10005;</a>
+    </div>
+    <div class="dlg-body">
+      <form class="stack" method="post" action="{{ url_for('custom_product') }}">
+        <input type="hidden" name="id" id="pm-f-id" value="">
+        <label>Item Name</label>
+        <input type="text" name="name" id="pm-f-name" required>
+
+        <label>Code</label>
+        <input type="text" name="code" id="pm-f-code">
+
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label>Unit</label>
+            <input type="text" name="unit" id="pm-f-unit" value="PCS">
+          </div>
+          <div style="flex:1;">
+            <label>GST %</label>
+            <input type="number" step="0.01" name="gst_rate" id="pm-f-gst" value="0">
+          </div>
+        </div>
+
+        <label>HSN Code</label>
+        <input type="text" name="hsn_code" id="pm-f-hsn">
+
+        <label>UMRN Code</label>
+        <input type="text" name="umrn_code" id="pm-f-umrn">
+
+        <label>Item Code (for Chassis No.)</label>
+        <input type="text" name="chassis_item_code" id="pm-f-chassis-code" placeholder="Fixed segment used when generating this model's Chassis No.">
+
+        <h4 style="margin-bottom:2px;">Form 22 Certification <span style="font-weight:normal; color:#888; font-size:11px;">(from actual test certificate — leave blank if unknown)</span></h4>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;"><label>Type Approval Cert. No.</label><input type="text" name="type_approval_no" id="pm-f-tacn"></div>
+          <div style="flex:1;"><label>Fuel Type</label><input type="text" name="fuel_type" id="pm-f-fuel" value="Battery/Electric"></div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;"><label>Horn dB(A)</label><input type="text" name="horn_db" id="pm-f-horn"></div>
+          <div style="flex:1;"><label>Pass-by dB(A)</label><input type="text" name="pass_by_db" id="pm-f-passby"></div>
+        </div>
+
+        <label>Type</label>
+        <select name="fro" id="pm-f-fro">
+          <option value="F">Finished Goods</option>
+          <option value="R" selected>Raw Material</option>
+          <option value="O">Other</option>
+        </select>
+
+        <div class="btn-row">
+          <button type="submit" class="btn-primary">💾 Save</button>
+          <a class="btn" href="#" onclick="pmHideForm(); return false;">↺ Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden delete forms, one per row, submitted by pmDeleteSelected() -->
+{% for p in products %}
+<form id="pm-delete-form-{{ p.id }}" method="post" action="{{ url_for('product_delete', product_id=p.id) }}" style="display:none;"></form>
+{% endfor %}
+
+<script>
+const PM_DATA = {{ products_json|tojson }};
+
+function pmApplyFilter() {
+  const q = document.getElementById('pm-search').value.trim().toLowerCase();
+  const filter = document.querySelector('input[name="pm-filter"]:checked').value;
+  document.querySelectorAll('#pm-tbody tr[data-id]').forEach(row => {
+    const matchesSearch = !q || row.dataset.name.includes(q);
+    const matchesFilter = filter === 'All' || row.dataset.fro === filter;
+    row.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
+  });
+}
+document.getElementById('pm-search').addEventListener('input', pmApplyFilter);
+
+let pmSelectedId = null;
+function pmSelectRow(tr) {
+  document.querySelectorAll('#pm-tbody tr').forEach(r => r.classList.remove('selected'));
+  tr.classList.add('selected');
+  pmSelectedId = tr.dataset.id;
+}
+
+function pmShowForm(id) {
+  const overlay = document.getElementById('pm-form-overlay');
+  const p = id ? PM_DATA.find(x => x.id === id) : null;
+  document.getElementById('pm-form-title').textContent = p ? 'Modify Product' : 'Add Product';
+  document.getElementById('pm-f-id').value = p ? p.id : '';
+  document.getElementById('pm-f-name').value = p ? p.name : '';
+  document.getElementById('pm-f-code').value = p ? (p.code || '') : '';
+  document.getElementById('pm-f-unit').value = p ? (p.unit || 'PCS') : 'PCS';
+  document.getElementById('pm-f-gst').value = p ? (p.gst_rate || 0) : 0;
+  document.getElementById('pm-f-hsn').value = p ? (p.hsn_code || '') : '';
+  document.getElementById('pm-f-umrn').value = p ? (p.umrn_code || '') : '';
+  document.getElementById('pm-f-chassis-code').value = p ? (p.chassis_item_code || '') : '';
+  document.getElementById('pm-f-tacn').value = p ? (p.type_approval_no || '') : '';
+  document.getElementById('pm-f-fuel').value = p ? (p.fuel_type || 'Battery/Electric') : 'Battery/Electric';
+  document.getElementById('pm-f-horn').value = p ? (p.horn_db || '') : '';
+  document.getElementById('pm-f-passby').value = p ? (p.pass_by_db || '') : '';
+  document.getElementById('pm-f-fro').value = p ? (p.fro || 'R') : 'R';
+  overlay.style.display = 'flex';
+  setTimeout(() => document.getElementById('pm-f-name').focus(), 30);
+}
+function pmHideForm() { document.getElementById('pm-form-overlay').style.display = 'none'; }
+
+function pmModifySelected() {
+  if (!pmSelectedId) { alert('Select a product from the list first.'); return; }
+  pmShowForm(parseInt(pmSelectedId, 10));
+}
+function pmDeleteSelected() {
+  if (!pmSelectedId) { alert('Select a product from the list first.'); return; }
+  if (confirm('Delete this product?')) {
+    document.getElementById('pm-delete-form-' + pmSelectedId).submit();
+  }
+}
+</script>
+{% endblock %}

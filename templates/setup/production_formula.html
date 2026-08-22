@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="two-col">
+  <div class="panel" style="flex:1;">
+    <h3 style="margin-top:0;">{{ 'Edit Formula Line' if editing else 'Add Formula Line' }}</h3>
+    <form class="stack" method="post" action="{{ url_for('custom_production_formula') }}">
+      <input type="hidden" name="id" value="{{ editing.id if editing else '' }}">
+
+      <label>Formula Name</label>
+      <input type="text" name="formula_name" placeholder="e.g. jumbo loader (leave blank to use the product name)"
+             value="{{ editing.formula_name if editing else '' }}">
+
+      <label>Finished Product</label>
+      <select name="product_name" required>
+        <option value="">-- choose product --</option>
+        {% for p in finished_products %}
+          <option value="{{ p.name }}" data-code="{{ p.code or '' }}"
+            {% if editing and editing.product_name == p.name %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+        {% if editing and editing.product_name not in finished_products|map(attribute='name')|list %}
+          <option value="{{ editing.product_name }}" selected>{{ editing.product_name }} (not in Product Master)</option>
+        {% endif %}
+      </select>
+      <input type="hidden" name="product_code" id="product_code" value="{{ editing.product_code if editing else '' }}">
+
+      <label>Raw Material</label>
+      <select name="raw_item_name" id="raw_item_name" required>
+        <option value="">-- choose raw material --</option>
+        {% for r in raw_materials %}
+          <option value="{{ r.name }}" data-code="{{ r.code or '' }}" data-unit="{{ r.unit or 'PCS' }}"
+            {% if editing and editing.raw_item_name == r.name %}selected{% endif %}>{{ r.name }}</option>
+        {% endfor %}
+        {% if editing and editing.raw_item_name not in raw_materials|map(attribute='name')|list %}
+          <option value="{{ editing.raw_item_name }}" selected>{{ editing.raw_item_name }} (not in Product Master)</option>
+        {% endif %}
+      </select>
+      <input type="hidden" name="raw_item_code" id="raw_item_code" value="{{ editing.raw_item_code if editing else '' }}">
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>Qty per unit</label>
+          <input type="number" step="0.01" name="qty" value="{{ editing.qty if editing else 1 }}">
+        </div>
+        <div style="flex:1;">
+          <label>Unit</label>
+          <input type="text" name="unit" id="unit" value="{{ editing.unit if editing else 'PCS' }}">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="submit" class="btn-primary">💾 Save</button>
+        <a class="btn" href="{{ url_for('custom_production_formula') }}">↺ Cancel</a>
+      </div>
+    </form>
+    <p style="color:#888; font-size:12px; margin-top:14px;">
+      Formulas are also loaded in bulk via <a href="{{ url_for('custom_import_data') }}">Import Old Data</a>.
+      Every Production Voucher for a product automatically copies its formula lines as the raw material consumed.
+    </p>
+  </div>
+
+  <div class="panel" style="flex:1.4;">
+    <h3 style="margin-top:0;">Production Formula (BOM) by Formula Name</h3>
+    {% for key, lines in grouped.items() %}
+    {% set formula_name, product_name = key %}
+    <div style="margin-bottom:18px; border:1px solid #ddd; border-radius:6px; overflow:hidden;">
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#f2f4f8; padding:8px 12px;">
+        <div>
+          <strong>{{ formula_name }}</strong>
+          <span style="color:#888; font-size:12px;"> &rarr; {{ product_name }}</span>
+        </div>
+        <form method="post" action="{{ url_for('production_formula_delete_product') }}" style="display:inline;"
+              onsubmit="return confirm('Remove the WHOLE formula \'{{ formula_name }}\'?');">
+          <input type="hidden" name="formula_name" value="{{ formula_name }}">
+          <input type="hidden" name="product_name" value="{{ product_name }}">
+          <button type="submit" class="btn-danger">Remove whole formula</button>
+        </form>
+      </div>
+      <table class="grid">
+        <thead>
+          <tr><th>Raw Material</th><th>Code</th><th>Qty</th><th>Unit</th><th style="width:110px;">Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for line in lines %}
+          <tr>
+            <td>{{ line.raw_item_name }}</td>
+            <td>{{ line.raw_item_code or '' }}</td>
+            <td>{{ line.qty }}</td>
+            <td>{{ line.unit }}</td>
+            <td class="row-actions">
+              <a class="btn" href="{{ url_for('custom_production_formula', edit=line.id) }}">Edit</a>
+              <form method="post" action="{{ url_for('production_formula_delete', row_id=line.id) }}" style="display:inline;" onsubmit="return confirm('Delete this line?');">
+                <button type="submit" class="btn-danger">Del</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="color:#888;">No formulas yet — add one on the left, or import old data.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+document.querySelector('select[name="product_name"]').addEventListener('change', function() {
+  var opt = this.options[this.selectedIndex];
+  document.getElementById('product_code').value = opt.dataset.code || '';
+});
+document.getElementById('raw_item_name').addEventListener('change', function() {
+  var opt = this.options[this.selectedIndex];
+  document.getElementById('raw_item_code').value = opt.dataset.code || '';
+  if (opt.dataset.unit) document.getElementById('unit').value = opt.dataset.unit;
+});
+</script>
+{% endblock %}

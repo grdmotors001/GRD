@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="two-col">
+  <div class="panel" style="flex:1;">
+    <h3 style="margin-top:0;">Day Book Entry</h3>
+    <p style="color:#666; font-size:12px;">Manual receipt/payment against a dealer or party — not tied to a Tax Invoice (bank transfers, UPI/NEFT receipts, cheques paid out, etc.). Feeds into the party Ledger.</p>
+    <form class="stack" method="post">
+      <input type="hidden" name="id" id="row-id">
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>Date</label>
+          <input type="date" name="date" id="field-date" value="{{ today }}">
+        </div>
+        <div style="flex:1;">
+          <label>Vr.No.</label>
+          <input type="text" id="field-vr_no" value="{{ next_vr_no }}" readonly style="background:#eee;">
+        </div>
+      </div>
+
+      <label>Dealer Name</label>
+      <input type="text" name="dealer_name" id="field-dealer_name" list="dealer-list" required>
+      <datalist id="dealer-list">{% for n in dealer_names %}<option value="{{ n }}">{% endfor %}</datalist>
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>Credit (Received)</label>
+          <input type="number" step="0.01" name="credit_received" id="field-credit_received" value="0">
+        </div>
+        <div style="flex:1;">
+          <label>Debit (Paid)</label>
+          <input type="number" step="0.01" name="debit_paid" id="field-debit_paid" value="0">
+        </div>
+      </div>
+
+      <label>Narration</label>
+      <textarea name="narration" id="field-narration" rows="3" placeholder="e.g. UPI 1525, NEFT 1525, V C NO-2939 (RAJ KUMAR)"></textarea>
+
+      <div class="btn-row">
+        <button type="submit" class="btn-primary">💾 Save</button>
+        <button type="button" onclick="resetForm()">↺ Cancel / New</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="panel" style="flex:1.4;">
+    <form method="get" style="display:flex; gap:10px; align-items:flex-end; margin-bottom:14px;">
+      <div style="flex:1;">
+        <label style="font-weight:bold; font-size:12.5px;">Search Party Name</label><br>
+        <input type="text" name="search" value="{{ search }}" style="width:100%;">
+      </div>
+      <div><button type="submit">Search</button></div>
+      <div><a class="btn" href="{{ url_for('custom_day_book') }}">Clear</a></div>
+    </form>
+
+    <table class="grid">
+      <thead>
+        <tr><th>Date</th><th>Vr.No.</th><th>Party Name</th><th>Debit Amt.</th><th>Credit Amount</th><th>Narration</th><th style="width:110px;">Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td>{{ e.date.strftime('%d/%m/%Y') if e.date else '' }}</td>
+          <td>{{ e.vr_no }}</td>
+          <td>{{ e.dealer_name }}</td>
+          <td>{{ '%.2f'|format(e.debit_paid) if e.debit_paid else '' }}</td>
+          <td>{{ '%.2f'|format(e.credit_received) if e.credit_received else '' }}</td>
+          <td>{{ e.narration or '' }}</td>
+          <td class="row-actions">
+            <button type="button" class="edit-btn" data-id="{{ e.id }}"
+              data-date="{{ e.date.isoformat() if e.date else '' }}"
+              data-dealer_name="{{ e.dealer_name }}"
+              data-credit_received="{{ e.credit_received or 0 }}"
+              data-debit_paid="{{ e.debit_paid or 0 }}"
+              data-narration="{{ e.narration or '' }}">Modify</button>
+            <form method="post" action="{{ url_for('day_book_delete', row_id=e.id) }}" style="display:inline;" onsubmit="return confirm('Delete this Day Book entry?');">
+              <button type="submit" class="btn-danger">Del</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="color:#888;">No Day Book entries yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function resetForm() {
+  document.getElementById('row-id').value = '';
+  document.getElementById('field-date').value = '{{ today }}';
+  document.getElementById('field-vr_no').value = '{{ next_vr_no }}';
+  document.getElementById('field-dealer_name').value = '';
+  document.getElementById('field-credit_received').value = '0';
+  document.getElementById('field-debit_paid').value = '0';
+  document.getElementById('field-narration').value = '';
+}
+document.querySelectorAll('.edit-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.getElementById('row-id').value = btn.dataset.id;
+    document.getElementById('field-date').value = btn.dataset.date;
+    document.getElementById('field-vr_no').value = '(unchanged)';
+    document.getElementById('field-dealer_name').value = btn.dataset.dealer_name;
+    document.getElementById('field-credit_received').value = btn.dataset.credit_received;
+    document.getElementById('field-debit_paid').value = btn.dataset.debit_paid;
+    document.getElementById('field-narration').value = btn.dataset.narration;
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  });
+});
+</script>
+{% endblock %}

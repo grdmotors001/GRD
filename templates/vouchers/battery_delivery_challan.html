@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="two-col">
+  <div class="panel" style="flex:1;">
+    <h3 style="margin-top:0;">Battery Delivery Challan</h3>
+    <p style="color:#666; font-size:12px;">A battery sent to a dealer on its own (e.g. a warranty replacement), separate from a vehicle Delivery Challan.</p>
+    <form class="stack" method="post" action="{{ url_for('battery_delivery_challan_create') }}">
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>Challan No.</label>
+          <input type="text" name="challan_no" value="{{ suggested_challan_no }}">
+        </div>
+        <div style="flex:1;">
+          <label>Date</label>
+          <input type="date" name="date" value="{{ today_iso }}">
+        </div>
+      </div>
+
+      <label>Dealer</label>
+      <select name="dealer_id" required>
+        <option value="">-- Select Dealer --</option>
+        {% for d in dealers %}<option value="{{ d.id }}">{{ d.name }}{% if d.code %} ({{ d.code }}){% endif %}</option>{% endfor %}
+      </select>
+
+      <label>Battery Make</label>
+      <input type="text" name="battery_maker" list="battery-list">
+      <datalist id="battery-list">{% for b in battery_makers %}<option value="{{ b.name }}">{% endfor %}</datalist>
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;"><label>Battery No.</label><input type="text" name="battery_no"></div>
+        <div style="flex:1;"><label>Qty</label><input type="number" name="qty" value="1" min="1"></div>
+      </div>
+
+      <label>Remarks</label>
+      <input type="text" name="remarks">
+
+      <div class="btn-row">
+        <button type="submit" class="btn-primary">💾 Save</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="panel" style="flex:1.4;">
+    <table class="grid">
+      <thead><tr><th>Date</th><th>Challan No.</th><th>Dealer</th><th>Battery Make</th><th>Battery No.</th><th>Qty</th><th style="width:60px;"></th></tr></thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td>{{ r.date.strftime('%d/%m/%Y') if r.date else '' }}</td>
+          <td>{{ r.challan_no }}</td>
+          <td>{{ r.dealer.name if r.dealer else '' }}</td>
+          <td>{{ r.battery_maker or '' }}</td>
+          <td>{{ r.battery_no or '' }}</td>
+          <td>{{ r.qty }}</td>
+          <td class="row-actions">
+            <form method="post" action="{{ url_for('battery_delivery_challan_delete', record_id=r.id) }}" onsubmit="return confirm('Delete this record?');">
+              <button type="submit" class="btn-danger">Del</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="color:#888;">No battery delivery challans yet — add one on the left.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

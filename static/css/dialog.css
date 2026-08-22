@@ -1,0 +1,182 @@
+/* Floating "dialog window" chrome, reused by Product Master search list and
+   Production Voucher, matching the original desktop app's popup windows. */
+
+.dlg-window {
+  background: #ece9de;
+  border: 1px solid #6e93bf;
+  box-shadow: 3px 3px 10px rgba(0,0,0,0.35);
+  margin-bottom: 18px;
+}
+.dlg-titlebar {
+  background: linear-gradient(#a9c2dd, #6e93bf);
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #4c6f96;
+}
+.dlg-titlebar .x {
+  background: #b23b2e;
+  color: #fff;
+  border: 1px solid #7a231a;
+  width: 18px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.dlg-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #c7c2ac;
+  flex-wrap: wrap;
+}
+.dlg-toolbar .search-field label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+.dlg-toolbar .search-field input {
+  width: 220px;
+  padding: 4px 6px;
+  border: 1px solid #8a8a8a;
+  font-size: 13px;
+  background: #ffffe0;
+}
+.dlg-toolbar-btns { display: flex; gap: 6px; margin-left: auto; }
+.dlg-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 54px;
+  padding: 5px 8px;
+  border: 1px solid #999;
+  background: linear-gradient(#fdfdfd,#dcdcdc);
+  cursor: pointer;
+  font-size: 11px;
+  color: #202020;
+  text-decoration: none;
+}
+.dlg-btn:hover { background: #d6e4f0; }
+.dlg-btn .ic { font-size: 15px; }
+.dlg-btn.danger { color: #b22222; }
+.dlg-btn.exit { color: #b22222; font-weight: bold; }
+
+.dlg-body { padding: 10px 12px 14px 12px; }
+
+.dlg-table-wrap { max-height: 420px; overflow-y: auto; border: 1px solid #8a8a8a; background: #fff; }
+table.dlg-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.dlg-table th {
+  position: sticky; top: 0;
+  background: #dedede;
+  border: 1px solid #b0b0b0;
+  padding: 4px 6px;
+  text-align: left;
+}
+table.dlg-table td { border: 1px solid #e2e2e2; padding: 3px 6px; cursor: pointer; }
+table.dlg-table tbody tr:hover td { background: #eef4fb; }
+table.dlg-table tbody tr.selected td { background: #316ac5; color: #fff; }
+table.dlg-table tbody tr.empty td { color: #888; cursor: default; }
+table.dlg-table tbody tr.empty:hover td { background: #fff; }
+
+.dlg-filter-row {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 8px 4px 2px 4px;
+  font-size: 12.5px;
+}
+.dlg-filter-row label { display: flex; align-items: center; gap: 4px; font-weight: normal; }
+.dlg-filter-row input[type=radio] { width: auto; }
+
+/* ---- Production Voucher two-panel layout ---- */
+.pv-panels { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+.pv-left { flex: 1.2; min-width: 340px; }
+.pv-right {
+  flex: 1;
+  min-width: 300px;
+  background: linear-gradient(#f6ecec, #f2e2e2);
+  border: 2px solid #d98b3f;
+  padding: 14px;
+}
+.pv-field { margin-bottom: 10px; }
+.pv-field label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 3px; }
+.pv-field input, .pv-field select {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #8a8a8a;
+  font-size: 13px;
+  background: #fff;
+}
+.pv-row2 { display: flex; gap: 10px; }
+.pv-row2 > div { flex: 1; }
+.pv-row3 { display: flex; gap: 10px; }
+.pv-row3 > div { flex: 1; }
+.pv-btn-inline {
+  padding: 5px 10px;
+  border: 1px solid #999;
+  background: linear-gradient(#fdfdfd,#dcdcdc);
+  cursor: pointer;
+  font-size: 11.5px;
+  margin-top: 4px;
+}
+.pv-btn-inline:hover { background: #d6e4f0; }
+
+table.pv-grid { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+table.pv-grid th { background: #dedede; border: 1px solid #b0b0b0; padding: 3px 5px; text-align: left; }
+table.pv-grid td { border: 1px solid #ccc; padding: 2px 3px; }
+table.pv-grid td input { width: 100%; border: none; padding: 3px 4px; font-size: 12px; background: transparent; }
+table.pv-grid td input:focus { background: #ffffe0; outline: 1px solid #6e93bf; }
+table.pv-grid .rm-row-btn { color: #b22222; cursor: pointer; text-align: center; font-weight: bold; }
+
+.pv-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; margin-top: 10px; }
+.pv-checks label { display: flex; align-items: center; gap: 6px; font-weight: normal; font-size: 12.5px; }
+.pv-checks input[type=checkbox] { width: auto; }
+
+.pv-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid #4c6f96;
+  background: linear-gradient(#a9c2dd, #6e93bf);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 12.5px;
+  margin-bottom: 10px;
+}
+.pv-toggle-btn:hover { filter: brightness(1.05); }
+
+/* ---- Production Voucher popup (was: appeared below the list) ---- */
+.pv-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 999;
+}
+.pv-modal-window {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  max-width: 95vw;
+  max-height: 90vh;
+  width: 900px;
+  overflow-y: auto;
+  margin-bottom: 0;
+}
+@media (max-width: 950px) {
+  .pv-modal-window { width: 95vw; }
+}

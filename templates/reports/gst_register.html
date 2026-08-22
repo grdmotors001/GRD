@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <h3 style="margin-top:0;">GST Register</h3>
+  <form method="get" action="{{ filter_action }}" style="display:flex; gap:10px; align-items:flex-end; margin-bottom:14px;">
+    <div><label style="font-weight:bold; font-size:12.5px;">From</label><br><input type="date" name="from" value="{{ from_date }}"></div>
+    <div><label style="font-weight:bold; font-size:12.5px;">To</label><br><input type="date" name="to" value="{{ to_date }}"></div>
+    <div style="flex:1; min-width:180px;"><label style="font-weight:bold; font-size:12.5px;">🔍 Search</label><br>
+      <input type="text" name="search" value="{{ search }}" placeholder="Dealer / Party / Bill No..." style="width:100%;"></div>
+    <div><button type="submit">Search</button></div>
+    <div><a class="btn" href="{{ filter_action }}">Clear</a></div>
+    <div><a class="btn" href="{{ export_action }}?from={{ from_date }}&to={{ to_date }}&search={{ search }}">📊 Export Excel</a></div>
+  </form>
+
+  <h4>Outward Supplies (Tax Invoices)</h4>
+  <table class="grid">
+    <thead><tr><th>Date</th><th>Bill No.</th><th>Buyer</th><th>Taxable Value</th><th>CGST</th><th>SGST</th><th>IGST</th></tr></thead>
+    <tbody>
+      {% for i in outward %}
+      <tr>
+        <td>{{ i.date.strftime('%d/%m/%Y') if i.date else '' }}</td>
+        <td>{{ i.bill_no }}</td>
+        <td>{{ i.buyer_name }}</td>
+        <td>{{ '%.2f'|format(i.taxable_value) }}</td>
+        <td>{{ '%.2f'|format(i.cgst_amount) }}</td>
+        <td>{{ '%.2f'|format(i.sgst_amount) }}</td>
+        <td>{{ '%.2f'|format(i.igst_amount) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="color:#888;">No outward supplies in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+    {% if outward %}
+    <tfoot><tr style="font-weight:bold; background:#eef0c8;">
+      <td colspan="3">Total</td>
+      <td>{{ '%.2f'|format(outward_totals.taxable) }}</td>
+      <td>{{ '%.2f'|format(outward_totals.cgst) }}</td>
+      <td>{{ '%.2f'|format(outward_totals.sgst) }}</td>
+      <td>{{ '%.2f'|format(outward_totals.igst) }}</td>
+    </tr></tfoot>
+    {% endif %}
+  </table>
+
+  <h4>Inward Supplies (Purchase Bills)</h4>
+  <table class="grid">
+    <thead><tr><th>Date</th><th>Bill No.</th><th>Party</th><th>Taxable Value</th><th>CGST</th><th>SGST</th><th>IGST</th></tr></thead>
+    <tbody>
+      {% for r in inward %}
+      <tr>
+        <td>{{ r.date.strftime('%d/%m/%Y') if r.date else '' }}</td>
+        <td>{{ r.doc_no }}</td>
+        <td>{{ r.party_name }}</td>
+        <td>{{ '%.2f'|format(r.taxable) }}</td>
+        <td>{{ '%.2f'|format(r.cgst) }}</td>
+        <td>{{ '%.2f'|format(r.sgst) }}</td>
+        <td>{{ '%.2f'|format(r.igst) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="color:#888;">No inward supplies in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+    {% if inward %}
+    <tfoot><tr style="font-weight:bold; background:#eef0c8;">
+      <td colspan="3">Total</td>
+      <td>{{ '%.2f'|format(inward_totals.taxable) }}</td>
+      <td>{{ '%.2f'|format(inward_totals.cgst) }}</td>
+      <td>{{ '%.2f'|format(inward_totals.sgst) }}</td>
+      <td>{{ '%.2f'|format(inward_totals.igst) }}</td>
+    </tr></tfoot>
+    {% endif %}
+  </table>
+
+  <h4>Net GST Payable</h4>
+  {% set net_cgst = outward_totals.cgst - inward_totals.cgst %}
+  {% set net_sgst = outward_totals.sgst - inward_totals.sgst %}
+  {% set net_igst = outward_totals.igst - inward_totals.igst %}
+  <table class="grid" style="max-width:500px;">
+    <tr><td>Net CGST Payable</td><td>{{ '%.2f'|format(net_cgst) }}</td></tr>
+    <tr><td>Net SGST Payable</td><td>{{ '%.2f'|format(net_sgst) }}</td></tr>
+    <tr><td>Net IGST Payable</td><td>{{ '%.2f'|format(net_igst) }}</td></tr>
+  </table>
+  <p style="color:#888; font-size:11.5px;">Negative values mean input tax credit carried forward.</p>
+</div>
+{% endblock %}

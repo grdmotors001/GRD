@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Delivery Challan / Warranty Card - {{ dc.challan_no }}</title>
+<style>
+  :root{
+    --navy:#16305c;
+    --green:#0e6b4f;
+    --green-dark:#0a4d3a;
+    --teal:#0f6b6b;
+    --gold:#f5c518;
+    --border:#16305c;
+    --paper:#ffffff;
+    --warn-bg:#fdf3d9;
+    --warn-border:#e8b93a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:'Segoe UI', Arial, sans-serif;
+    background:#e7e7e7;
+    margin:0;
+    padding:20px;
+  }
+  .sheet{
+    max-width:900px;
+    margin:0 auto;
+    background:var(--paper);
+    border:2px solid #222;
+    padding:22px 28px 28px;
+  }
+  .no-print{ text-align:center; margin-bottom:14px; }
+  @media print { .no-print{ display:none; } body{ background:#fff; padding:0; } .sheet{ border:none; margin:0; } }
+
+  .top-line{ text-align:center; font-size:12px; letter-spacing:1px; color:#333; margin-bottom:4px; }
+  .header{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #222; padding-bottom:8px; margin-bottom:10px; }
+  .logo-block{ display:flex; flex-direction:column; }
+  .logo-title{
+    font-size:40px; font-weight:900; font-style:italic; letter-spacing:1px;
+    background:linear-gradient(180deg,#444,#000);
+    -webkit-background-clip:text; background-clip:text; color:transparent; line-height:1;
+  }
+  .logo-sub{ font-size:12px; font-weight:700; letter-spacing:1px; margin-top:2px; }
+  .addr{ text-align:right; font-size:12px; line-height:1.5; color:#222; }
+
+  .brand-strip{ display:flex; justify-content:space-between; align-items:center; gap:6px; padding:8px 0 12px; border-bottom:2px solid #ccc; margin-bottom:14px; }
+  .brand-item{ display:flex; flex-direction:column; align-items:center; font-size:9px; font-weight:700; text-align:center; width:100px; }
+  .brand-icon{ width:50px; height:36px; display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:2px; }
+
+  .title-banner{ background:var(--navy); color:#fff; text-align:center; font-weight:800; letter-spacing:2px; padding:10px; font-size:17px; border-radius:4px; margin-bottom:16px; }
+
+  .info-row{ display:flex; gap:14px; margin-bottom:18px; }
+  .info-box{ flex:1; border:1.5px solid var(--navy); border-radius:6px; padding:10px 12px; text-align:center; position:relative; }
+  .info-icon{ width:34px; height:34px; border-radius:50%; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; margin:0 auto 6px; font-size:16px; }
+  .info-label{ font-size:11px; font-weight:700; letter-spacing:1px; color:#333; margin-bottom:6px; }
+  .info-value{ font-size:16px; font-weight:800; border-top:1px dashed #999; padding-top:4px; }
+
+  .section-banner{ background:var(--navy); color:#fff; text-align:center; font-weight:700; letter-spacing:1px; padding:8px; clip-path:polygon(2% 0,98% 0,100% 50%,98% 100%,2% 100%,0 50%); margin-bottom:0; font-size:14px; }
+
+  .dealer-wrap{ display:flex; border:1.5px solid var(--green); border-top:none; margin-bottom:14px; }
+  .dealer-side{ background:var(--green); color:#fff; width:110px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:800; text-align:center; font-size:15px; padding:10px; flex-shrink:0; }
+  .dealer-icon-circle{ width:44px; height:44px; border-radius:50%; background:#fff; color:var(--green); display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:8px; }
+  .dealer-content{ flex:1; padding:12px 18px; }
+  .dealer-item{ display:flex; gap:10px; margin-bottom:10px; font-size:14px; align-items:flex-start; }
+  .dealer-item:last-child{margin-bottom:0;}
+  .dealer-label{ width:110px; display:flex; align-items:center; gap:8px; font-weight:600; color:#222; flex-shrink:0; }
+  .dealer-icon{ width:20px; text-align:center; color:var(--green); }
+  .dealer-colon{width:10px;}
+  .dealer-val{ font-weight:700; }
+
+  .salesperson-row{ display:flex; gap:14px; margin-bottom:16px; }
+  .sp-box{ flex:3; border:1.5px solid var(--navy); border-radius:6px; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:14px; }
+  .sp-box2{ flex:1; border:1.5px solid var(--navy); border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:800; }
+  .sp-icon{color:var(--green);}
+
+  .two-col{ display:flex; gap:14px; margin-bottom:16px; align-items:flex-start; }
+  .col-left, .col-right{flex:1;}
+  .tbl-banner{ background:var(--navy); color:#fff; display:flex; align-items:center; gap:8px; padding:8px 12px; font-weight:700; font-size:13px; letter-spacing:0.5px; }
+  .tbl-banner.green{background:var(--green);}
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  table th, table td{ border:1px solid #999; padding:7px 10px; text-align:left; }
+  table th{ background:#f2f2f2; text-align:center; font-weight:700; }
+  td.center{text-align:center;}
+  .highlight{ background:#fdf3a0; font-weight:700; }
+
+  .acc-row{ display:flex; align-items:center; padding:7px 10px; font-size:13px; border-bottom:1px solid #ddd; gap:8px; }
+  .acc-num{ width:20px; font-weight:700; color:#555; }
+  .acc-name{flex:1;}
+  .acc-colon{width:10px;text-align:center;}
+  .acc-status{ width:60px; display:flex; align-items:center; gap:4px; font-weight:700; }
+  .yes{color:#1a9c4a;}
+  .no{color:#d02020;}
+  .check-circle{ width:16px;height:16px;border-radius:50%; display:inline-flex;align-items:center;justify-content:center; font-size:11px;color:#fff; }
+  .check-circle.yes{background:#1a9c4a;}
+  .check-circle.no{background:#d02020;}
+  .acc-flex{ display:flex; gap:0; border:1px solid #999; }
+  .acc-flex .acc-col:first-child{border-right:1px solid #999;}
+  .acc-col{ flex:1; }
+
+  .accessories-row{ display:flex; gap:14px; margin-bottom:16px; }
+  .acc-table-wrap{flex:1;}
+  .vehicle-image-box{ width:280px; flex-shrink:0; border:1px solid #999; display:flex; align-items:center; justify-content:center; background:#eef3f7; position:relative; overflow:hidden; }
+  .vehicle-image-box svg{width:100%;height:100%;}
+
+  .warning-box{ display:flex; align-items:center; gap:14px; background:var(--warn-bg); border:1.5px solid var(--warn-border); border-radius:6px; padding:12px 16px; margin-bottom:16px; }
+  .warning-icon{ font-size:26px; flex-shrink:0; color:#b8860b; }
+  .warning-text b{display:block;margin-bottom:4px;font-size:14px;}
+  .warning-text{font-size:12.5px;line-height:1.5;color:#333;flex:1;}
+  .qr-box{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .qr-placeholder{ width:64px;height:64px; background:#fff; border:1px solid #999; }
+  .qr-text{ font-size:11px; font-weight:700; color:#333; line-height:1.3; }
+
+  .decl-row{ display:flex; gap:16px; margin-bottom:22px; align-items:flex-start; }
+  .decl-icon-box{ width:44px;height:44px; background:var(--green); border-radius:6px; display:flex;align-items:center;justify-content:center; color:#fff;font-size:20px; flex-shrink:0; }
+  .decl-text{ font-size:12px; line-height:1.5; flex:1; }
+  .decl-note{ flex:1.6; font-size:12px; line-height:1.6; }
+
+  .sig-row{ display:flex; gap:14px; }
+  .sig-box{ flex:1; border:1.5px solid var(--navy); border-radius:6px; padding:14px 12px 10px; }
+  .sig-title{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:12.5px; margin-bottom:20px; }
+  .sig-icon{ width:26px;height:26px; border-radius:50%; background:var(--navy); color:#fff; display:flex;align-items:center;justify-content:center; font-size:12px; }
+  .sig-line{ border-bottom:1px dashed #999; text-align:center; color:#999; font-size:11px; padding-bottom:2px; }
+  .sig-label{ text-align:center; font-size:11px; color:#555; margin-top:4px; font-style:italic; }
+
+  @media (max-width:700px){
+    .brand-strip{flex-wrap:wrap;}
+    .accessories-row{flex-direction:column;}
+    .vehicle-image-box{width:100%;height:220px;}
+    .two-col{flex-direction:column;}
+    .sig-row{flex-direction:column;}
+    .decl-row{flex-direction:column;}
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button onclick="window.print()">🖨 Print / Save as PDF</button>
+  <a href="{{ url_for('custom_delivery_challan') }}">← Back</a>
+</div>
+
+<div class="sheet">
+
+  {% if header_image_url %}
+  <div class="header-image-wrap" style="text-align:center; margin-bottom:14px;">
+    <img src="{{ header_image_url }}" alt="{{ company.name if company else 'G.R.D. MOTORS' }}"
+         style="width:100%; max-width:100%; height:auto; display:block;">
+  </div>
+  {% else %}
+  <div class="top-line">DHAN-DHAN SAHIB SHRI GURU RAMDAS SAHIB JI</div>
+
+  <div class="header">
+    <div class="logo-block">
+      <div class="logo-title">{{ company.name if company else 'G.R.D. MOTORS' }}</div>
+      <div class="logo-sub">MANUFACTURER OF E-RICKSHAW AND E-CART</div>
+    </div>
+    <div class="addr">
+      {{ company.address1 if company and company.address1 else 'GF, Plot No. 2, Ranholla Road' }}<br>
+      {{ company.address2 if company and company.address2 else 'Mundka Village, New Delhi- 110041' }}<br>
+      Email: {{ company.email if company and company.email else 'davrath89ac@gmail.com' }}<br>
+      website: {{ company.website if company and company.website else 'www.davrath.com' }}<br>
+      GSTIN: {{ company.gst_no if company and company.gst_no else '07CKVPS8316N1ZZ' }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not model_logo_url and not header_image_url %}
+  <div class="brand-strip">
+    <div class="brand-item"><div class="brand-icon">🐎</div>davrath</div>
+    <div class="brand-item"><div class="brand-icon">🚲</div>NAMO BHARAT</div>
+    <div class="brand-item"><div class="brand-icon">🛺</div>RAJKUMARI</div>
+    <div class="brand-item"><div class="brand-icon">🌿</div>KUBER</div>
+    <div class="brand-item"><div class="brand-icon">🐯</div>FIGHTER</div>
+    <div class="brand-item"><div class="brand-icon">🚚</div>MINI TRUCK</div>
+    <div class="brand-item"><div class="brand-icon">🌸</div>PUSHPA</div>
+    <div class="brand-item"><div class="brand-icon">🇮🇳</div>MERA BHARAT</div>
+  </div>
+  {% endif %}
+
+  <div class="title-banner">&lt;&lt;&lt;&lt;&lt;&lt; DELIVERY CHALLAN / WARRANTY CARD &gt;&gt;&gt;&gt;&gt;&gt;</div>
+
+  <div class="info-row">
+    <div class="info-box">
+      <div class="info-icon">📋</div>
+      <div class="info-label">SERIAL NO.</div>
+      <div class="info-value">{{ dc.challan_no }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-icon">🏪</div>
+      <div class="info-label">DEALER CODE</div>
+      <div class="info-value">{{ dc.dealer.code if dc.dealer and dc.dealer.code else '—' }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-icon">📅</div>
+      <div class="info-label">DATED</div>
+      <div class="info-value">{{ dc.date.strftime('%d/%m/%Y') if dc.date else '' }}</div>
+    </div>
+  </div>
+
+  <div class="section-banner">{{ dc.product_name or '' }}</div>
+
+  <div class="dealer-wrap">
+    <div class="dealer-side">
+      <div class="dealer-icon-circle">👤</div>
+      DEALER<br>DETAILS
+    </div>
+    <div class="dealer-content">
+      <div class="dealer-item">
+        <div class="dealer-label"><span class="dealer-icon">🏢</span>Dealer</div>
+        <div class="dealer-colon">:</div>
+        <div class="dealer-val">{{ dc.dealer.name if dc.dealer else '' }}</div>
+      </div>
+      <div class="dealer-item">
+        <div class="dealer-label"><span class="dealer-icon">📞</span>Mobile</div>
+        <div class="dealer-colon">:</div>
+        <div class="dealer-val">{{ dc.dealer.mobile if dc.dealer else '' }}</div>
+      </div>
+      <div class="dealer-item">
+        <div class="dealer-label"><span class="dealer-icon">📍</span>Destination</div>
+        <div class="dealer-colon">:</div>
+        <div class="dealer-val">{{ dc.destination or '' }}</div>
+      </div>
+      <div class="dealer-item">
+        <div class="dealer-label"><span class="dealer-icon">📠</span>GSTIN</div>
+        <div class="dealer-colon">:</div>
+        <div class="dealer-val">{{ dc.dealer.gst_no if dc.dealer else '' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="salesperson-row">
+    <div class="sp-box"><span class="sp-icon">👤</span>(Sales Person) Care of : <b>&nbsp;{{ dc.salesman or '' }}</b></div>
+    <div class="sp-box2">{{ dc.other or '' }}</div>
+  </div>
+
+  <div class="two-col">
+    <div class="col-left">
+      <div class="tbl-banner">🚚 VEHICLE PARTICULARS</div>
+      <table>
+        <tr><th>SRN</th><th>PARTICULARS</th><th>DETAILS</th></tr>
+        <tr><td class="center">1</td><td>Chassis No.</td><td class="highlight">{{ dc.chassis_no }}</td></tr>
+        <tr><td class="center">2</td><td>Motor No.</td><td>{{ dc.motor_no or '' }}</td></tr>
+        <tr><td class="center">3</td><td>Controller No.</td><td>{{ dc.controller_no or '' }}</td></tr>
+        <tr><td class="center">4</td><td>Colour</td><td>{{ dc.colour or '' }}</td></tr>
+      </table>
+    </div>
+    <div class="col-right">
+      <div class="tbl-banner green">💲 BATTERY MAKE &amp; NOS.</div>
+      <table>
+        <tr><th colspan="2">{{ dc.battery_maker or '—' }}</th></tr>
+        <tr><td class="center">1</td><td>{{ dc.battery_no1 or '0' }}</td></tr>
+        <tr><td class="center">2</td><td>{{ dc.battery_no2 or '0' }}</td></tr>
+        <tr><td class="center">3</td><td>{{ dc.battery_no3 or '0' }}</td></tr>
+        <tr><td class="center">4</td><td>{{ dc.battery_no4 or '0' }}</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="accessories-row">
+    <div class="acc-table-wrap">
+      <div class="tbl-banner" style="background:var(--teal);">ACCESSORIES / FITMENTS</div>
+      <div class="acc-flex">
+        <div class="acc-col">
+          {% for num, label, val in [(7,'Toolkit',dc.toolkit),(8,'Jack',dc.jack),(9,'Charger',dc.charger),(10,'Center Lock',dc.center_lock)] %}
+          <div class="acc-row" {% if loop.last %}style="border-bottom:none;"{% endif %}>
+            <span class="acc-num">{{ num }}</span><span class="acc-name">{{ label }}</span><span class="acc-colon">:</span>
+            <span class="acc-status {{ 'yes' if val else 'no' }}"><span class="check-circle {{ 'yes' if val else 'no' }}">{{ '✓' if val else '✕' }}</span>{{ 'YES' if val else 'NO' }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="acc-col">
+          {% for num, label, val in [(11,'Mat',dc.mat),(12,'Stapney',dc.stapney),(13,'Front Glass',dc.front_glass),(14,'H Lock',dc.h_lock)] %}
+          <div class="acc-row" {% if loop.last %}style="border-bottom:none;"{% endif %}>
+            <span class="acc-num">{{ num }}</span><span class="acc-name">{{ label }}</span><span class="acc-colon">:</span>
+            <span class="acc-status {{ 'yes' if val else 'no' }}"><span class="check-circle {{ 'yes' if val else 'no' }}">{{ '✓' if val else '✕' }}</span>{{ 'YES' if val else 'NO' }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="vehicle-col" style="flex:0 0 280px; display:flex; flex-direction:column; gap:8px;">
+    <div class="vehicle-image-box">
+      {% if model_logo_url %}
+      <img src="{{ model_logo_url }}" alt="{{ dc.product_name }}" style="max-width:90%; max-height:90%; object-fit:contain;">
+      {% else %}
+      <svg viewBox="0 0 280 220" xmlns="http://www.w3.org/2000/svg">
+        <rect width="280" height="220" fill="#eef3f7"/>
+        <ellipse cx="140" cy="190" rx="120" ry="10" fill="#d5dee5"/>
+        <rect x="40" y="70" width="170" height="70" rx="6" fill="#1c3a5e"/>
+        <rect x="55" y="45" width="140" height="45" rx="8" fill="#25507e" stroke="#0c2748" stroke-width="2"/>
+        <rect x="55" y="20" width="150" height="10" rx="4" fill="#1c3a5e"/>
+        <circle cx="80" cy="165" r="22" fill="#222"/>
+        <circle cx="80" cy="165" r="9" fill="#888"/>
+        <circle cx="190" cy="165" r="22" fill="#222"/>
+        <circle cx="190" cy="165" r="9" fill="#888"/>
+        <rect x="20" y="120" width="20" height="40" rx="4" fill="#333"/>
+        <text x="140" y="200" text-anchor="middle" font-size="11" fill="#777" font-family="Arial">Vehicle Image</text>
+      </svg>
+      {% endif %}
+    </div>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <div class="warning-icon">⚠️</div>
+    <div class="warning-text">
+      <b>THIS RICKSHAW IS FOR DISPLAYING PURPOSE ONLY.</b>
+      If it will be sold without prior permission will be had liable to give penalty / damage and case will be register under vehicle act.
+    </div>
+    <div class="qr-box">
+      <div class="qr-placeholder"></div>
+      <div class="qr-text">SCAN FOR<br>WARRANTY<br>VERIFICATION</div>
+    </div>
+  </div>
+
+  <div class="decl-row">
+    <div class="decl-icon-box">🛡️</div>
+    <div class="decl-text">
+      <b>DECLARATION</b><br>
+      I agree with all the terms and conditions as per this delivery note and agreement with manufacture.
+    </div>
+    <div class="decl-note">
+      <b>Note :</b> मोटर के जलने या पूरी तरह से जलने पर कोई भी रिससेसमेंट नहीं होगी।<br>
+      मोटर अथवा कंट्रोलर / डिफेंसल को बाहर के मैकेनिक से खुलवाया जाता है तो उसकी कोई भी गॉस्टी नहीं होगी।
+    </div>
+  </div>
+
+  <div class="sig-row">
+    <div class="sig-box">
+      <div class="sig-title"><span class="sig-icon">✓</span>CHECKED BY :</div>
+      <div class="sig-line">.......................................</div>
+      <div class="sig-label">( Signature )</div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-title"><span class="sig-icon">🖊</span>APPROVED BY :</div>
+      <div class="sig-line">.......................................</div>
+      <div class="sig-label">( Signature )</div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-title"><span class="sig-icon">📋</span>RECEIVED BY :</div>
+      <div class="sig-line">.......................................</div>
+      <div class="sig-label">( Signature )</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

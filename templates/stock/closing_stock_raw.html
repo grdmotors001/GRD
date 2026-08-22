@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <h3 style="margin-top:0;">Closing Stock - Raw Material</h3>
+  <p style="color:#666; font-size:12px;">Closing Qty = total purchased (Purchase Bills) minus total consumed (Production Vouchers).</p>
+
+  <table class="grid">
+    <thead><tr><th>Item Name</th><th>HSN</th><th>Purchased</th><th>Consumed</th><th>Closing Qty</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr {% if r.closing < 0 %}style="color:#a33;"{% endif %}>
+        <td>{{ r.name }}</td>
+        <td>{{ r.hsn or '' }}</td>
+        <td>{{ '%.2f'|format(r.purchased) }}</td>
+        <td>{{ '%.2f'|format(r.consumed) }}</td>
+        <td>{{ '%.2f'|format(r.closing) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="color:#888;">No raw material activity yet — add Purchase Bills and/or Production Vouchers.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if rows %}
+  <p style="color:#a33; font-size:11.5px;">Rows in red have gone negative — usually means raw material was consumed by a
+     Production Voucher before a matching Purchase Bill was entered (e.g. imported opening stock wasn't included).</p>
+  {% endif %}
+</div>
+{% endblock %}

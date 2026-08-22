@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <h3 style="margin-top:0;">Purchase Register</h3>
+  <form method="get" action="{{ filter_action }}" style="display:flex; gap:10px; align-items:flex-end; margin-bottom:14px;">
+    <div><label style="font-weight:bold; font-size:12.5px;">From</label><br><input type="date" name="from" value="{{ from_date }}"></div>
+    <div><label style="font-weight:bold; font-size:12.5px;">To</label><br><input type="date" name="to" value="{{ to_date }}"></div>
+    <div style="flex:1; min-width:180px;"><label style="font-weight:bold; font-size:12.5px;">🔍 Search</label><br>
+      <input type="text" name="search" value="{{ search }}" placeholder="Dealer / Party / Bill No..." style="width:100%;"></div>
+    <div><button type="submit">Search</button></div>
+    <div><a class="btn" href="{{ filter_action }}">Clear</a></div>
+    <div><a class="btn" href="{{ export_action }}?from={{ from_date }}&to={{ to_date }}&search={{ search }}">📊 Export Excel</a></div>
+  </form>
+
+  <table class="grid">
+    <thead>
+      <tr>
+        <th>Date</th><th>Bill No.</th><th>Party Name</th><th>Item Name</th><th>HSN</th>
+        <th>Taxable Amt</th><th>CGST Amt</th><th>SGST Amt</th><th>IGST Amt</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.date.strftime('%d/%m/%Y') if r.date else '' }}</td>
+        <td>{{ r.bill_no }}</td>
+        <td>{{ r.party_name }}</td>
+        <td>{{ r.item_name }}</td>
+        <td>{{ r.hsn or '' }}</td>
+        <td>{{ '%.2f'|format(r.taxable_amt) }}</td>
+        <td>{{ '%.2f'|format(r.cgst_amt) }}</td>
+        <td>{{ '%.2f'|format(r.sgst_amt) }}</td>
+        <td>{{ '%.2f'|format(r.igst_amt) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" style="color:#888;">No purchases in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+    {% if rows %}
+    <tfoot>
+      <tr style="font-weight:bold; background:#eef0c8;">
+        <td colspan="5">Total</td>
+        <td>{{ '%.2f'|format(totals.taxable) }}</td>
+        <td>{{ '%.2f'|format(totals.cgst) }}</td>
+        <td>{{ '%.2f'|format(totals.sgst) }}</td>
+        <td>{{ '%.2f'|format(totals.igst) }}</td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+</div>
+{% endblock %}

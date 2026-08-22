@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel coming-soon">
+  <div class="badge">{{ category }}</div>
+  <h2>{{ title }}</h2>
+  <p>This screen is on the build list next. The menu link, URL, and page layout are already<br>
+     wired up — only the data entry / report logic still needs to be built.</p>
+  <p><a class="btn" href="{{ url_for('dashboard') }}">&larr; Back to Dashboard</a></p>
+</div>
+{% endblock %}

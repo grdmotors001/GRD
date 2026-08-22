@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="two-col">
+  <div class="panel" style="flex:1;">
+    <h3 style="margin-top:0;">{{ item.label }}</h3>
+    <form class="stack" method="post">
+      <input type="hidden" name="id" id="row-id">
+      {% for name, label, type in fields %}
+        {% if type == "checkbox" %}
+        <label style="display:flex; align-items:center; gap:6px;">
+          <input type="checkbox" name="{{ name }}" id="field-{{ name }}" value="1"> {{ label }}
+        </label>
+        {% else %}
+        <label>{{ label }}</label>
+        {% if type == "textarea" %}
+        <textarea name="{{ name }}" id="field-{{ name }}" rows="4"></textarea>
+        {% else %}
+        <input type="{{ type }}" name="{{ name }}" id="field-{{ name }}">
+        {% endif %}
+        {% endif %}
+      {% endfor %}
+      <div class="btn-row">
+        <button type="submit" class="btn-primary">💾 Save</button>
+        <button type="button" onclick="resetForm()">↺ Cancel / New</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="panel" style="flex:1.4;">
+    <table class="grid">
+      <thead>
+        <tr>
+          {% for name, label, type in fields %}<th>{{ label }}</th>{% endfor %}
+          <th style="width:110px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          {% for name, label, type in fields %}
+            <td {% if type == "textarea" %}style="white-space:pre-line;"{% endif %}>{% if type == "checkbox" %}{{ "✅" if row[name] else "" }}{% else %}{{ row[name] if row[name] is not none else '' }}{% endif %}</td>
+          {% endfor %}
+          <td class="row-actions">
+            <button type="button" class="edit-btn" data-id="{{ row.id }}"
+              {% for name, label, type in fields %}data-{{ name }}="{{ row[name] if row[name] is not none else '' }}"{% endfor %}>Edit</button>
+            <form method="post" action="{{ url_for('simple_master_delete', key=item.key, row_id=row.id) }}" style="display:inline;" onsubmit="return confirm('Delete this record?');">
+              <button type="submit" class="btn-danger">Del</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="{{ fields|length + 1 }}" style="color:#888;">No records yet — add one on the left, or import old data.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function resetForm() {
+  document.getElementById('row-id').value = '';
+  {% for name, label, type in fields %}
+  {% if type == "checkbox" %}
+  document.getElementById('field-{{ name }}').checked = false;
+  {% else %}
+  document.getElementById('field-{{ name }}').value = '';
+  {% endif %}
+  {% endfor %}
+}
+document.querySelectorAll('.edit-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.getElementById('row-id').value = btn.dataset.id;
+    for (const key in btn.dataset) {
+      if (key === 'id') continue;
+      const el = document.getElementById('field-' + key);
+      if (!el) continue;
+      if (el.type === 'checkbox') {
+        el.checked = btn.dataset[key] === '1' || btn.dataset[key] === 'True' || btn.dataset[key] === 'true';
+      } else {
+        el.value = btn.dataset[key] || '';
+      }
+    }
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  });
+});
+</script>
+{% endblock %}

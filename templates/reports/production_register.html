@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <h3 style="margin-top:0;">Production Register</h3>
+  <form method="get" action="{{ filter_action }}" style="display:flex; gap:10px; align-items:flex-end; margin-bottom:14px;">
+    <div><label style="font-weight:bold; font-size:12.5px;">From</label><br><input type="date" name="from" value="{{ from_date }}"></div>
+    <div><label style="font-weight:bold; font-size:12.5px;">To</label><br><input type="date" name="to" value="{{ to_date }}"></div>
+    <div style="flex:1; min-width:180px;"><label style="font-weight:bold; font-size:12.5px;">🔍 Search</label><br>
+      <input type="text" name="search" value="{{ search }}" placeholder="Dealer / Party / Bill No..." style="width:100%;"></div>
+    <div><button type="submit">Search</button></div>
+    <div><a class="btn" href="{{ filter_action }}">Clear</a></div>
+    <div><a class="btn" href="{{ export_action }}?from={{ from_date }}&to={{ to_date }}&search={{ search }}">📊 Export Excel</a></div>
+  </form>
+
+  <table class="grid">
+    <thead><tr><th>Date</th><th>Vou. No.</th><th>Item Name</th><th>Qty</th><th>Chassis</th><th>Colour</th><th>Battery Make</th></tr></thead>
+    <tbody>
+      {% for v in vouchers %}
+      <tr>
+        <td>{{ v.date.strftime('%d/%m/%Y') if v.date else '' }}</td>
+        <td>{{ v.vou_no }}</td>
+        <td>{{ v.product_name }}</td>
+        <td>{{ v.quantity }}</td>
+        <td>{{ v.chassis_no }}</td>
+        <td>{{ v.colour or '' }}</td>
+        <td>{{ v.battery_maker or '' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="color:#888;">No production in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+    {% if vouchers %}
+    <tfoot><tr style="font-weight:bold; background:#eef0c8;"><td colspan="3">Total</td><td>{{ vouchers|sum(attribute='quantity') }}</td><td colspan="3"></td></tr></tfoot>
+    {% endif %}
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>eBill (Web) - {{ company.name if company else 'G.R.D. MOTORS' }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<div class="titlebar">eBill (1.0) - {{ company.name if company else 'G.R.D. MOTORS' }} &nbsp;<span class="titlebar-sub">[Web Edition]</span></div>
+
+<nav class="menubar">
+  <a href="{{ url_for('dashboard') }}" class="menubar-home">🏠 Dashboard</a>
+  {% for category, items in MENU.items() %}
+  <div class="dropdown">
+    <button class="dropbtn">{{ category }}</button>
+    <div class="dropdown-content">
+      {% for item in items %}
+        <a href="{{ url_for('module', key=item.key) }}">{{ item.label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  <div class="dropdown">
+    <button class="dropbtn exitbtn">Exit</button>
+    <div class="dropdown-content">
+      <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+      <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+  </div>
+  {% if current_username %}
+  <span class="menubar-user">User ID : <strong>{{ current_username }}{{ ' - S' if current_is_super else '' }}</strong> &nbsp;|&nbsp; <a href="{{ url_for('logout') }}">Logout</a></span>
+  {% endif %}
+</nav>
+
+<div class="page-title">Dashboard as on {{ today }}</div>
+
+<div class="flash-wrap">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+</div>
+
+<main class="content">
+  {% block content %}{% endblock %}
+</main>
+
+<div class="statusbar">
+  <div class="statusbar-left">
+    <strong>{{ company.name if company else 'G.R.D. MOTORS' }}</strong><br>
+    F.Y. {{ (company.year[:4] ~ '-' ~ company.year[4:]) if company and company.year else '2021-2022' }}
+  </div>
+  <div class="statusbar-right">
+    User ID : admin - S<br>
+    <span class="path">Path : Web / SQLite (ebill.db)</span>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="two-col">
+  <div class="panel" style="flex:1.2;">
+    <h3 style="margin-top:0;" id="pb-form-title">Purchase Bill</h3>
+    <form class="stack" method="post" action="{{ url_for('purchase_bill_create') }}" id="pb-form">
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label>Bill No.</label>
+          <input type="text" name="bill_no" id="pb-f-bill-no" value="{{ suggested_bill_no }}">
+        </div>
+        <div style="flex:1;">
+          <label>Date</label>
+          <input type="date" name="date" id="pb-f-date" value="{{ today_iso }}">
+        </div>
+      </div>
+
+      <label>Party Name</label>
+      <input type="text" name="party_name" id="pb-f-party" list="party-list" required>
+      <datalist id="party-list">{% for p in parties %}<option value="{{ p.name }}">{% endfor %}</datalist>
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;"><label>Party GSTIN</label><input type="text" name="party_gst_no" id="pb-f-gst"></div>
+        <div style="flex:1;">
+          <label>State Code <span style="font-weight:normal; color:#888;">(07=intra-state → CGST+SGST)</span></label>
+          <input type="text" name="party_state_code" id="pb-f-statecode" value="07">
+        </div>
+      </div>
+
+      <h4 style="margin-bottom:4px;">Items</h4>
+      <datalist id="raw-material-list">
+        {% for r in raw_materials %}<option value="{{ r.name }}" data-hsn="{{ r.hsn_code or '' }}" data-gst="{{ r.gst_rate or 0 }}">{% endfor %}
+      </datalist>
+      <table class="grid" id="item-rows">
+        <thead>
+          <tr><th>Item Name</th><th>HSN</th><th>Qty</th><th>Rate</th><th>GST %</th><th></th></tr>
+        </thead>
+        <tbody id="item-rows-body"></tbody>
+      </table>
+      <div class="btn-row">
+        <button type="button" onclick="addItemRow()">+ Add Item</button>
+      </div>
+
+      <label>Remarks</label>
+      <input type="text" name="remarks" id="pb-f-remarks">
+
+      <div class="btn-row">
+        <button type="submit" class="btn-primary">💾 Save</button>
+        <button type="button" id="pb-cancel-edit-btn" style="display:none;" onclick="pbOpenAdd()">↺ Cancel Edit</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="panel" style="flex:1.5;">
+    <table class="grid">
+      <thead>
+        <tr>
+          <th>Date</th><th>Bill No.</th><th>Party Name</th><th>Item Name</th><th>HSN</th>
+          <th>Taxable Amt</th><th>GST</th><th>Tax Amt</th><th style="width:100px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bills %}
+          {% for it in b.items %}
+          <tr>
+            <td>{{ b.date.strftime('%d/%m/%Y') if b.date else '' }}</td>
+            <td>{{ b.bill_no or '.' }}</td>
+            <td>{{ b.party_name }}</td>
+            <td>{{ it.item_name }}</td>
+            <td>{{ it.hsn_code or '' }}</td>
+            <td>{{ '%.2f'|format(it.taxable_amt) }}</td>
+            <td>{{ it.gst_rate }}% {{ '(IGST)' if it.is_inter_state else '(C+S)' }}</td>
+            <td>{{ '%.2f'|format(it.tax_amt) }}</td>
+            {% if loop.first %}
+            <td rowspan="{{ b.items|length }}" class="row-actions">
+              <button type="button" onclick="pbOpenEdit({{ b.id }})">Edit</button>
+              <form method="post" action="{{ url_for('purchase_bill_delete', bill_id=b.id) }}" onsubmit="return confirm('Delete this whole bill?');">
+                <button type="submit" class="btn-danger">Del</button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        {% else %}
+        <tr><td colspan="9" style="color:#888;">No purchase bills yet — add one on the left.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const pbCreateUrl = "{{ url_for('purchase_bill_create') }}";
+const pbUpdateUrlTemplate = "{{ url_for('purchase_bill_update', bill_id=0) }}";
+const pbBillsById = {{ bills_by_id | tojson }};
+
+let rowCount = 0;
+function addItemRow(item) {
+  item = item || {};
+  const tbody = document.getElementById('item-rows-body');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" name="item_name[]" list="raw-material-list" style="width:100%;" onchange="autoFill(this)" value="${item.item_name || ''}"></td>
+    <td><input type="text" name="hsn_code[]" style="width:80px;" value="${item.hsn_code || ''}"></td>
+    <td><input type="number" step="0.01" name="qty[]" value="${item.qty !== undefined ? item.qty : 1}" style="width:70px;"></td>
+    <td><input type="number" step="0.01" name="rate[]" value="${item.rate !== undefined ? item.rate : 0}" style="width:90px;"></td>
+    <td><input type="number" step="0.01" name="gst_rate[]" value="${item.gst_rate !== undefined ? item.gst_rate : 0}" style="width:70px;"></td>
+    <td><button type="button" onclick="this.closest('tr').remove()">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+  rowCount++;
+}
+function autoFill(input) {
+  const options = document.getElementById('raw-material-list').options;
+  for (const opt of options) {
+    if (opt.value === input.value) {
+      const row = input.closest('tr');
+      row.querySelector('input[name="hsn_code[]"]').value = opt.dataset.hsn || '';
+      row.querySelector('input[name="gst_rate[]"]').value = opt.dataset.gst || 0;
+      break;
+    }
+  }
+}
+
+function pbOpenAdd() {
+  const form = document.getElementById('pb-form');
+  form.action = pbCreateUrl;
+  document.getElementById('pb-form-title').textContent = 'Purchase Bill';
+  document.getElementById('pb-cancel-edit-btn').style.display = 'none';
+  document.getElementById('pb-f-bill-no').value = "{{ suggested_bill_no }}";
+  document.getElementById('pb-f-date').value = "{{ today_iso }}";
+  document.getElementById('pb-f-party').value = '';
+  document.getElementById('pb-f-gst').value = '';
+  document.getElementById('pb-f-statecode').value = '07';
+  document.getElementById('pb-f-remarks').value = '';
+  document.getElementById('item-rows-body').innerHTML = '';
+  rowCount = 0;
+  addItemRow();
+}
+
+function pbOpenEdit(id) {
+  const b = pbBillsById[id];
+  if (!b) { alert('Could not load this bill for editing.'); return; }
+  const form = document.getElementById('pb-form');
+  form.action = pbUpdateUrlTemplate.replace('/0/update', '/' + id + '/update');
+  document.getElementById('pb-form-title').textContent = 'Purchase Bill — Modify (' + (b.bill_no || id) + ')';
+  document.getElementById('pb-cancel-edit-btn').style.display = '';
+  document.getElementById('pb-f-bill-no').value = b.bill_no || '';
+  document.getElementById('pb-f-date').value = b.date || '';
+  document.getElementById('pb-f-party').value = b.party_name || '';
+  document.getElementById('pb-f-gst').value = b.party_gst_no || '';
+  document.getElementById('pb-f-statecode').value = b.party_state_code || '07';
+  document.getElementById('pb-f-remarks').value = b.remarks || '';
+  document.getElementById('item-rows-body').innerHTML = '';
+  rowCount = 0;
+  (b.items || []).forEach(addItemRow);
+  if (!b.items || !b.items.length) addItemRow();
+  document.getElementById('pb-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Start with one blank row in Add mode
+addItemRow();
+</script>
+{% endblock %}

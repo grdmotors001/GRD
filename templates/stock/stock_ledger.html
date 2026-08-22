@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <h3 style="margin-top:0;">{{ title }}</h3>
+
+  <form class="stack" method="get" action="{{ filter_action }}" style="display:flex; gap:10px; align-items:flex-end; margin-bottom:14px;">
+    <div><label>From</label><input type="date" name="from" value="{{ from_date }}"></div>
+    <div><label>To</label><input type="date" name="to" value="{{ to_date }}"></div>
+    <div><button type="submit">Filter</button></div>
+    <div><a class="btn" href="{{ filter_action }}">Clear</a></div>
+  </form>
+
+  <table class="grid">
+    <thead><tr><th>Date</th><th>Type</th><th>Doc No.</th><th>Chassis No.</th><th>Particulars</th><th>Qty</th><th>Balance</th></tr></thead>
+    <tbody>
+      {% for e in events %}
+      <tr>
+        <td>{{ e.date.strftime('%d/%m/%Y') if e.date else '' }}</td>
+        <td style="color: {{ 'green' if e.type == 'IN' else '#a33' }}; font-weight:bold;">{{ e.type }}</td>
+        <td>{{ e.doc_no }}</td>
+        <td>{{ e.chassis_no }}</td>
+        <td>{{ e.particulars }}</td>
+        <td>{{ '+' if e.type == 'IN' else '-' }}{{ e.qty }}</td>
+        <td>{{ e.balance }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="color:#888;">No movement in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

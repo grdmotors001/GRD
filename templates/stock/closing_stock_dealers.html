@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <h3 style="margin-top:0;">Closing Stock - E-Rickshaw with Dealers</h3>
+  <p style="color:#666; font-size:12px;">Vehicles delivered to a dealer (Delivery Challan raised) but not yet sold via Tax Invoice.</p>
+
+  <h4>Summary (by Dealer / Model)</h4>
+  <table class="grid" style="max-width:700px;">
+    <thead><tr><th>Dealer</th><th>Model</th><th>Qty</th></tr></thead>
+    <tbody>
+      {% for (dealer, model), qty in summary.items() %}
+      <tr><td>{{ dealer }}</td><td>{{ model }}</td><td>{{ qty }}</td></tr>
+      {% else %}
+      <tr><td colspan="3" style="color:#888;">No stock currently with dealers.</td></tr>
+      {% endfor %}
+      {% if summary %}
+      <tr style="font-weight:bold;"><td colspan="2">Total</td><td>{{ vehicles|length }}</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <h4>Detail (by Chassis)</h4>
+  <table class="grid">
+    <thead><tr><th>Date</th><th>Dealer</th><th>Chassis No.</th><th>Model</th><th>Colour</th></tr></thead>
+    <tbody>
+      {% for v in vehicles %}
+      <tr>
+        <td>{{ v.date.strftime('%d/%m/%Y') if v.date else '' }}</td>
+        <td>{{ v.dealer_name or '' }}</td>
+        <td>{{ v.chassis_no }}</td>
+        <td>{{ v.model_name }}</td>
+        <td>{{ v.colour }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="color:#888;">No stock currently with dealers.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

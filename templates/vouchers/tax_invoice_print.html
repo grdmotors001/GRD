@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ doc_title|default('Tax Invoice') }} {{ ti.bill_no }}</title>
+<style>
+  :root{
+    --navy:#152a5c;
+    --navy-dark:#0f1f45;
+    --gold:#f2b90e;
+    --red:#c81e2c;
+    --border:#152a5c;
+    --grey-bg:#f5f6f8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:'Arial', 'Helvetica Neue', sans-serif;
+    background:#e9eaee;
+    margin:0;
+    padding:20px 0;
+    color:#1a1a1a;
+  }
+  .sheet{
+    max-width:1000px;
+    margin:0 auto;
+    background:#fff;
+    border:2px solid var(--navy);
+    padding:22px;
+    position:relative;
+  }
+  .jaikara{
+    text-align:center;
+    font-size:12px;
+    letter-spacing:.5px;
+    color:#5b6472;
+    font-weight:700;
+    margin-bottom:14px;
+  }
+  /* HEADER */
+  .header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    padding-bottom:14px;
+    border-bottom:3px solid var(--navy);
+    margin-bottom:18px;
+  }
+  .logo-block{position:relative;}
+  .logo-text{
+    font-size:46px;
+    font-weight:900;
+    font-style:italic;
+    letter-spacing:1px;
+    line-height:1;
+    background:linear-gradient(180deg,#3a3a3a,#000);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:#111;
+    font-family:'Arial Black', Arial, sans-serif;
+    margin:0;
+  }
+  .logo-underline{
+    height:4px;
+    width:340px;
+    background:linear-gradient(90deg,var(--red),#7a0f16);
+    margin:2px 0 4px 0;
+  }
+  .logo-sub{
+    font-weight:bold;
+    font-size:13px;
+    letter-spacing:0.5px;
+    color:#111;
+  }
+  .header-right{
+    text-align:right;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:10px;
+  }
+  .gstin-line{
+    font-weight:bold;
+    font-size:16px;
+    color:var(--navy-dark);
+    letter-spacing:0.3px;
+  }
+  .banner-wrap{
+    position:relative;
+    width:340px;
+    height:48px;
+  }
+  .banner-gold{
+    position:absolute;
+    top:6px;
+    left:0;
+    width:100%;
+    height:100%;
+    background:var(--gold);
+    clip-path:polygon(14% 0, 100% 0, 100% 100%, 0% 100%);
+  }
+  .invoice-banner{
+    position:absolute;
+    top:0;
+    left:14px;
+    width:calc(100% - 14px);
+    height:100%;
+    background:var(--navy);
+    color:#fff;
+    font-size:21px;
+    font-weight:800;
+    letter-spacing:0.5px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    clip-path:polygon(10% 0, 100% 0, 100% 100%, 0% 100%);
+  }
+
+  /* BRAND STRIP */
+  .brand-strip{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:6px;
+    padding:8px 0 12px;
+    border-bottom:2px solid #ccc;
+    margin-bottom:16px;
+  }
+  .brand-item{
+    display:flex; flex-direction:column; align-items:center;
+    font-size:9px; font-weight:700; text-align:center; width:100px;
+  }
+  .brand-icon{
+    width:50px; height:36px; display:flex; align-items:center;
+    justify-content:center; font-size:22px; margin-bottom:2px;
+  }
+
+  /* TOP GRID: billed to / invoice info */
+  .top-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-bottom:16px;
+  }
+  .box{
+    border:1px solid #cfd3dc;
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .box-title{
+    background:var(--navy);
+    color:#fff;
+    font-weight:bold;
+    font-size:13px;
+    padding:8px 12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    letter-spacing:0.3px;
+  }
+  .box-title .ic{
+    display:inline-flex;
+    width:16px;height:16px;
+    align-items:center;justify-content:center;
+  }
+  .box-body{
+    padding:12px 14px;
+    font-size:13px;
+    line-height:1.55;
+  }
+  .billed-name{font-weight:bold; margin-bottom:4px; font-size:13.5px;}
+  .divider-dots{
+    border-top:1px dashed #b8bcc7;
+    margin:8px 0;
+  }
+  .kv-row{display:flex; margin-bottom:2px;}
+  .kv-label{width:130px; flex-shrink:0;}
+  .kv-colon{width:14px; flex-shrink:0;}
+
+  .info-box .box-body .kv-row{margin-bottom:8px;}
+  .info-box .box-body{padding-bottom:6px;}
+
+  .bank-box{margin-top:14px;}
+
+  /* Others info row */
+  .others-row{
+    display:grid;
+    grid-template-columns:1.4fr 1fr 1fr 1fr;
+    border:1px solid #cfd3dc;
+    border-radius:6px;
+    margin-bottom:18px;
+    overflow:hidden;
+  }
+  .others-cell{
+    padding:10px 14px;
+    border-left:1px solid #e3e5ea;
+    font-size:13px;
+  }
+  .others-cell:first-child{border-left:none;}
+  .others-cell .title{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-weight:bold;
+    color:var(--navy-dark);
+    font-size:12.5px;
+    margin-bottom:6px;
+  }
+  .icon-circle{
+    width:20px;height:20px;
+    border-radius:50%;
+    background:var(--navy);
+    display:inline-flex;
+    align-items:center;justify-content:center;
+    color:#fff;
+    font-size:11px;
+    flex-shrink:0;
+  }
+
+  /* TABLE */
+  table.items{
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:0;
+    font-size:13px;
+  }
+  table.items thead th{
+    background:var(--navy);
+    color:#fff;
+    padding:9px 8px;
+    font-size:12.5px;
+    text-align:center;
+    border:1px solid #26397a;
+  }
+  table.items tbody td{
+    border:1px solid #cfd3dc;
+    padding:10px 8px;
+    vertical-align:top;
+  }
+  table.items tbody tr td:first-child{text-align:center; font-weight:bold;}
+  .item-name{font-weight:bold; margin-bottom:6px;}
+  .item-sub{font-size:12.5px; margin-bottom:3px;}
+  .item-sub .lbl{display:inline-block; width:78px;}
+  table.items td.num{text-align:right;}
+  table.items td.center{text-align:center;}
+  .filler-row td{height:70px; border:1px solid #cfd3dc;}
+
+  /* Bottom: words + totals */
+  .bottom-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin:18px 0;
+  }
+  .words-box{
+    border:1px solid #cfd3dc;
+    border-radius:6px;
+    padding:14px 16px;
+  }
+  .words-title{
+    display:flex;align-items:center;gap:8px;
+    font-weight:bold;
+    color:var(--navy-dark);
+    margin-bottom:10px;
+    font-size:13px;
+  }
+  .words-text{font-weight:bold; font-size:14.5px; line-height:1.4;}
+
+  .totals-box{
+    border:1px solid #cfd3dc;
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .totals-row{
+    display:flex;
+    justify-content:space-between;
+    padding:7px 16px;
+    font-size:13px;
+    border-bottom:1px solid #eceef2;
+  }
+  .totals-row:last-of-type{border-bottom:none;}
+  .grand-total{
+    background:var(--navy);
+    color:#fff;
+    display:flex;
+    justify-content:space-between;
+    padding:12px 16px;
+    font-weight:bold;
+    font-size:16px;
+    align-items:center;
+  }
+
+  /* Declaration + sign */
+  .decl-grid{
+    display:grid;
+    grid-template-columns:1.4fr 1fr;
+    gap:16px;
+    margin-bottom:16px;
+  }
+  .decl-box, .sign-box{
+    border:1px solid #cfd3dc;
+    border-radius:6px;
+    padding:14px 16px;
+    font-size:12.5px;
+  }
+  .decl-title{
+    display:flex;align-items:center;gap:8px;
+    font-weight:bold;
+    color:var(--navy-dark);
+    margin-bottom:10px;
+    font-size:13px;
+  }
+  .decl-box ol{margin:0; padding-left:18px; line-height:1.9;}
+  .sign-box{
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    text-align:right;
+    font-size:13px;
+  }
+  .sign-for{font-weight:bold; text-align:right;}
+  .sign-line{border-top:1px dotted #999; margin-top:40px; padding-top:6px; text-align:right; font-size:12.5px;}
+
+  /* Extra info (eway/vehicle/despatch) */
+  .extra-info{
+    font-size:12px;
+    margin-bottom:16px;
+    color:#5b6472;
+    background:var(--grey-bg);
+    border:1px solid #cfd3dc;
+    border-radius:8px;
+    padding:10px 14px;
+  }
+  .remarks{ font-size:12.5px; margin-bottom:16px; }
+
+  /* Footer */
+  .footer{
+    border:1px solid #cfd3dc;
+    border-radius:6px;
+    padding:14px 16px;
+    display:grid;
+    grid-template-columns:1.4fr 0.8fr 1fr;
+    gap:10px;
+    align-items:center;
+    margin-bottom:14px;
+  }
+  .footer-contact div{
+    display:flex; gap:8px; align-items:flex-start;
+    font-size:12.5px;
+    margin-bottom:6px;
+  }
+  .footer-contact strong{font-weight:bold;}
+  .qr-wrap{display:flex; justify-content:center;}
+  .brand-logo-wrap{display:flex; justify-content:center; align-items:center;}
+
+  .strip{
+    background:var(--navy);
+    color:#fff;
+    text-align:center;
+    padding:9px;
+    font-weight:bold;
+    font-size:13px;
+    letter-spacing:0.5px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .no-print{ text-align:center; margin:16px; font-family:'Arial', sans-serif; }
+  .no-print button{
+    background:var(--navy);
+    color:#fff;
+    border:none;
+    padding:8px 18px;
+    border-radius:6px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    margin-right:10px;
+  }
+  .no-print a{ color:var(--navy); font-weight:600; text-decoration:none; }
+
+  @media print {
+    .no-print { display: none; }
+    body { background: #fff; padding:0; }
+    .sheet { border: none; margin: 0; max-width:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button onclick="window.print()">🖨 Print / Save as PDF</button>
+  <a href="{{ url_for('custom_tax_invoice') }}">← Back</a>
+</div>
+
+<div class="sheet">
+
+  <div class="jaikara">DHAN-DHAN SAHIB SRI GURU RAMDAS SAHIB JI</div>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-block">
+      <p class="logo-text">{{ company.name if company else 'G.R.D. MOTORS' }}</p>
+      <div class="logo-underline"></div>
+      <div class="logo-sub">MANUFACTURER OF E-RICKSHAW &amp; E-CART</div>
+    </div>
+    <div class="header-right">
+      <div class="gstin-line">GSTIN : {{ company.gst_no if company and company.gst_no else '—' }}</div>
+      <div class="banner-wrap">
+        <div class="banner-gold"></div>
+        <div class="invoice-banner">{{ doc_title|default('TAX INVOICE')|upper }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BRAND STRIP -->
+  {% if not model_logo_url %}
+  <div class="brand-strip">
+    <div class="brand-item"><div class="brand-icon">🐎</div>davrath</div>
+    <div class="brand-item"><div class="brand-icon">🚲</div>NAMO BHARAT</div>
+    <div class="brand-item"><div class="brand-icon">🛺</div>RAJKUMARI</div>
+    <div class="brand-item"><div class="brand-icon">🌿</div>KUBER</div>
+    <div class="brand-item"><div class="brand-icon">🐯</div>FIGHTER</div>
+    <div class="brand-item"><div class="brand-icon">🚚</div>MINI TRUCK</div>
+    <div class="brand-item"><div class="brand-icon">🌸</div>PUSHPA</div>
+    <div class="brand-item"><div class="brand-icon">🇮🇳</div>MERA BHARAT</div>
+  </div>
+  {% endif %}
+
+  <!-- TOP GRID -->
+  <div class="top-grid">
+    <div class="box">
+      <div class="box-title"><span class="ic">&#128100;</span> BUYER (BILLED TO)</div>
+      <div class="box-body">
+        <div class="billed-name">{{ ti.buyer_name }}</div>
+        {% if ti.buyer_father_name %}
+        <div>{{ ti.buyer_relation or 'S/o' }} {{ ti.buyer_father_name }}</div>
+        {% endif %}
+        <div>{{ ti.buyer_address or '' }}</div>
+        <div class="divider-dots"></div>
+        <div class="kv-row"><span class="kv-label">GSTIN/UIN/PAN</span><span class="kv-colon">:</span><span>{{ ti.buyer_gst_no or ti.buyer_pan or '-' }}</span></div>
+        <div class="kv-row"><span class="kv-label">Mobile No.</span><span class="kv-colon">:</span><span>{{ ti.buyer_mobile or '' }}</span></div>
+        <div class="kv-row"><span class="kv-label">State</span><span class="kv-colon">:</span><span>{{ ti.buyer_state or '' }}{{ ' (' ~ ti.buyer_state_code ~ ')' if ti.buyer_state_code else '' }}</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="box info-box">
+        <div class="box-title" style="background:transparent; color:#152a5c; padding-bottom:0;"></div>
+        <div class="box-body" style="padding-top:0;">
+          <div class="kv-row"><span class="kv-label">&#128197; {{ doc_no_label|default('Invoice No.') }}</span><span class="kv-colon">:</span><span><strong>{{ ti.bill_no }}</strong></span></div>
+          <div class="kv-row"><span class="kv-label">&#128197; Dated</span><span class="kv-colon">:</span><span>{{ ti.date.strftime('%d/%m/%Y') if ti.date else '' }}</span></div>
+          <div class="kv-row"><span class="kv-label">&#128203; e-Way Bill No.</span><span class="kv-colon">:</span><span>{{ ti.eway_bill_no or '-' }}</span></div>
+        </div>
+      </div>
+
+      <div class="box bank-box">
+        <div class="box-title"><span class="ic">&#127974;</span> COMPANY'S BANK DETAILS</div>
+        <div class="box-body">
+          <div class="kv-row"><span class="kv-label">Bank Name</span><span class="kv-colon">:</span><span>{{ print_bank_name or '' }}</span></div>
+          <div class="kv-row"><span class="kv-label">Account No.</span><span class="kv-colon">:</span><span>{{ print_bank_account_no or '' }}</span></div>
+          <div class="kv-row"><span class="kv-label">IFSC Code</span><span class="kv-colon">:</span><span>{{ print_bank_ifsc or '' }}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OTHERS INFO ROW -->
+  <div class="others-row">
+    <div class="others-cell">
+      <div class="title"><span class="icon-circle">&#128101;</span> CUSTOMER'S OTHERS INFO.</div>
+      <div>{% if ti.financer_name %}Hypothecation Purchase{% else %}&nbsp;{% endif %}</div>
+      <div>{{ ti.financer_name or '' }}</div>
+    </div>
+    <div class="others-cell">
+      <div class="title"><span class="icon-circle">&#128179;</span> MODE OF PAYMENTS</div>
+      <div>{{ ti.mode_of_payment or 'Bank &amp; Cash' }}</div>
+    </div>
+    <div class="others-cell">
+      <div class="title"><span class="icon-circle">&#128666;</span> VEHICLE REG. NO.</div>
+      <div>{{ ti.vehicle_reg_no or '&nbsp;' }}</div>
+    </div>
+    <div class="others-cell">
+      <div class="title"><span class="icon-circle">&#128666;</span> DESPATCHED THROUGH</div>
+      <div>{{ ti.despatch_through or '&nbsp;' }}</div>
+    </div>
+  </div>
+
+  <!-- ITEMS TABLE -->
+  <table class="items">
+    <thead>
+      <tr>
+        <th style="width:5%;">S. No.</th>
+        <th style="width:28%;">DESCRIPTION OF GOODS</th>
+        <th style="width:10%;">HSN/SAC</th>
+        <th style="width:11%;">QUANTITY</th>
+        <th style="width:11%;">RATE</th>
+        <th style="width:7%;">PER</th>
+        <th style="width:7%;">DISC.</th>
+        <th style="width:15%;">AMOUNT</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>
+          <div class="item-name">{{ ti.product_name }}</div>
+          <div class="item-sub"><span class="lbl">Chassis No. :</span> {{ ti.chassis_no }}</div>
+          <div class="item-sub"><span class="lbl">Motor No. :</span> {{ ti.motor_no or '' }}</div>
+          <div class="item-sub"><span class="lbl">Color :</span> {{ ti.colour or '' }}</div>
+        </td>
+        <td class="center">{{ ti.hsn_code or '87039010' }}</td>
+        <td class="center">1 PCS</td>
+        <td class="num">{{ '%.2f'|format(ti.gst_sale_amount or ti.sale_amount or 0) }}</td>
+        <td class="center">PCS</td>
+        <td class="center">{% if ti.discount %}{{ '%.2f'|format(ti.discount) }}{% else %}-{% endif %}</td>
+        <td class="num">&#8377;{{ '%.2f'|format(ti.taxable_value) }}</td>
+      </tr>
+      <tr class="filler-row">
+        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- WORDS + TOTALS -->
+  <div class="bottom-grid">
+    <div class="words-box">
+      <div class="words-title">&#128220; AMOUNT CHARGEABLE (IN WORDS)</div>
+      <div class="words-text">{{ ti.amount_in_words or '' }}</div>
+    </div>
+    <div class="totals-box">
+      <div class="totals-row"><span>Taxable Amount</span><span>&#8377;{{ '%.2f'|format(ti.taxable_value) }}</span></div>
+      {% if ti.discount %}
+      <div class="totals-row"><span>Discount</span><span>-&#8377;{{ '%.2f'|format(ti.discount) }}</span></div>
+      {% endif %}
+      {% if ti.is_inter_state %}
+      <div class="totals-row"><span>IGST @ {{ ti.gst_rate }}%</span><span>&#8377;{{ '%.2f'|format(ti.igst_amount) }}</span></div>
+      {% else %}
+      <div class="totals-row"><span>CGST @ {{ (ti.gst_rate / 2)|round(2) }}%</span><span>&#8377;{{ '%.2f'|format(ti.cgst_amount) }}</span></div>
+      <div class="totals-row"><span>SGST @ {{ (ti.gst_rate / 2)|round(2) }}%</span><span>&#8377;{{ '%.2f'|format(ti.sgst_amount) }}</span></div>
+      {% endif %}
+      {% if ti.registration_amount %}
+      <div class="totals-row"><span>Registration &amp; Other Charges</span><span>&#8377;{{ '%.2f'|format(ti.registration_amount) }}</span></div>
+      {% endif %}
+      {% if ti.insurance_amount %}
+      <div class="totals-row"><span>Insurance Charges</span><span>&#8377;{{ '%.2f'|format(ti.insurance_amount) }}</span></div>
+      {% endif %}
+      <div class="grand-total"><span>TOTAL</span><span>&#8377; {{ '%.2f'|format(ti.bill_total) }}</span></div>
+    </div>
+  </div>
+
+  {% if ti.eway_bill_no or ti.vehicle_reg_no or ti.despatch_through %}
+  <div class="extra-info">
+    {% if ti.vehicle_reg_no %}Vehicle Reg. No.: {{ ti.vehicle_reg_no }} &nbsp; {% endif %}
+    {% if ti.despatch_through %}Despatch Through: {{ ti.despatch_through }} &nbsp; {% endif %}
+    {% if ti.eway_bill_no %}E-Way Bill No.: {{ ti.eway_bill_no }}{% endif %}
+  </div>
+  {% endif %}
+
+  {% if ti.remarks %}<div class="remarks">Remarks: {{ ti.remarks }}</div>{% endif %}
+
+  <!-- DECLARATION + SIGN -->
+  <div class="decl-grid">
+    <div class="decl-box">
+      <div class="decl-title">&#128737;&#65039; DECLARATION</div>
+      <ol>
+        <li>Goods Once Sold Will Not Taken Back</li>
+        <li>Warranty As Per T&amp;C of Principal Company Only</li>
+        <li>Subject to Delhi Jurisdiction Only</li>
+      </ol>
+    </div>
+    <div class="sign-box">
+      <div class="sign-for">for {{ company.name if company else 'G.R.D. MOTORS' }}</div>
+      <div class="sign-line">Authorised Signatory</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-contact">
+      {% if rto_address %}
+      <div>&#128205; <span>{{ rto_address|replace('\n', '<br>')|safe }}</span></div>
+      {% else %}
+      <div>&#128205; <span><strong>SHOP NO-2 GROUND FLOOR NEAR</strong><br>CITIZEN CO-OPERATIV VILLAGE<br><strong>CHAKURA RAGHUNATHPUR</strong><br><strong>SEC-22 NOIDA UP-201301</strong></span></div>
+      {% endif %}
+      <div>&#9993;&#65039; E-Mail : grdmotors_89@yahoo.com</div>
+      <div>&#128222; Mob: 9999257936</div>
+      <div>&#127760; Web site : www.davrath.com</div>
+    </div>
+    <div class="qr-wrap">
+      <svg width="100" height="100" viewBox="0 0 100 100" style="border:1px solid #ccc;">
+        <rect width="100" height="100" fill="#fff"/>
+        <text x="50" y="55" text-anchor="middle" font-size="9" fill="#333">QR CODE</text>
+      </svg>
+    </div>
+    <div class="brand-logo-wrap">
+      {% if model_logo_url %}
+      <img src="{{ model_logo_url }}" alt="{{ ti.product_name }}" style="max-height:70px; max-width:140px; object-fit:contain;">
+      {% else %}
+      <svg width="140" height="80" viewBox="0 0 140 80">
+        <text x="70" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#8a5a2b" font-family="Georgia, serif">davrath</text>
+        <line x1="20" y1="50" x2="120" y2="50" stroke="#8a5a2b" stroke-width="1.5"/>
+        <line x1="25" y1="55" x2="115" y2="55" stroke="#8a5a2b" stroke-width="1.5"/>
+        <line x1="30" y1="60" x2="110" y2="60" stroke="#8a5a2b" stroke-width="1.5"/>
+      </svg>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="strip">DHAN DHAN SAHIB SRI GURU RAM DAS SAHIB JI</div>
+
+</div>
+</body>
+</html>

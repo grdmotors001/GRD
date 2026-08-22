@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Affidavit - {{ ti.chassis_no }}</title>
+<style>
+  body { font-family: 'Times New Roman', Georgia, serif; background: #eee; margin: 0; padding: 20px; }
+  .sheet { max-width: 800px; margin: 0 auto; background: #fff; border: 1px solid #999; padding: 40px 50px; font-size: 14px; line-height: 1.8; }
+  .no-print { text-align: center; margin-bottom: 14px; font-family: Arial, sans-serif; }
+  @media print { .no-print { display: none; } body { background: #fff; padding: 0; } .sheet { border: none; margin: 0; } }
+  h1 { text-align: center; font-size: 20px; text-decoration: underline; margin-bottom: 30px; }
+  .stamp-note { text-align: center; font-size: 11px; color: #888; margin-bottom: 24px; border: 1px dashed #ccc; padding: 6px; }
+  ol { padding-left: 22px; }
+  ol li { margin-bottom: 14px; }
+  .fill { font-weight: bold; border-bottom: 1px solid #333; padding: 0 3px; }
+  .verif { margin-top: 40px; }
+  .sig-row { display: flex; justify-content: space-between; margin-top: 60px; }
+  .sig-box { text-align: center; width: 45%; }
+  .sig-line { border-top: 1px solid #333; padding-top: 4px; font-size: 12.5px; }
+  .warn-box { background: #fdf3d9; border: 1px solid #e8b93a; border-radius: 4px; padding: 10px 14px; font-size: 12px; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button onclick="window.print()">🖨 Print / Save as PDF</button>
+  <a href="{{ url_for('tax_invoice_print_options', invoice_id=ti.id) }}">← Back</a>
+</div>
+
+<div class="sheet">
+
+  <div class="warn-box">
+    This is a standard-form affidavit draft, not an official government document — please review the
+    wording against your usual practice / your advocate's format before use, and get it notarized as
+    required for RTO submission.
+  </div>
+
+  <h1>AFFIDAVIT</h1>
+  <div class="stamp-note">(To be executed on non-judicial stamp paper of applicable value and notarized)</div>
+
+  <p>I, <span class="fill">{{ ti.buyer_name }}</span>{% if ti.buyer_father_name %} {{ ti.buyer_relation or 'S/o' }} <span class="fill">{{ ti.buyer_father_name }}</span>{% endif %}{% if ti.buyer_address %}, resident of <span class="fill">{{ ti.buyer_address }}</span>{% endif %}, do hereby solemnly affirm and declare as under:</p>
+
+  <ol>
+    <li>That I am the purchaser of the vehicle described below, manufactured by {{ company.name if company else 'G.R.D. MOTORS' }}:
+      <ul>
+        <li>Model : <span class="fill">{{ ti.product_name }}</span></li>
+        <li>Chassis No. : <span class="fill">{{ ti.chassis_no }}</span></li>
+        <li>Motor No. : <span class="fill">{{ ti.motor_no or '' }}</span></li>
+        <li>Colour : <span class="fill">{{ ti.colour or '' }}</span></li>
+        <li>Invoice No. &amp; Date : <span class="fill">{{ ti.bill_no }} dated {{ ti.date.strftime('%d/%m/%Y') if ti.date else '' }}</span></li>
+      </ul>
+    </li>
+    <li>That the above vehicle has been purchased by me from {{ company.name if company else 'G.R.D. MOTORS' }} against valid consideration, and I am the sole and lawful owner of the said vehicle.</li>
+    <li>That I shall get the said vehicle registered with the concerned Regional Transport Office (RTO) within the time period prescribed under the Motor Vehicles Act, 1988 and the rules made thereunder.</li>
+    <li>That I shall use the said vehicle strictly in accordance with the permit/registration category granted to it, and shall not use it for any purpose or route not permitted by law.</li>
+    <li>That the statements made above are true and correct to the best of my knowledge and belief, and nothing material has been concealed therefrom.</li>
+  </ol>
+
+  <p class="verif"><b>Verification:</b> Verified at ___________________ on this ______ day of ____________, 20____, that the contents of the above affidavit are true and correct to the best of my knowledge and belief.</p>
+
+  <div class="sig-row">
+    <div class="sig-box">
+      <div class="sig-line">Deponent<br>({{ ti.buyer_name }})</div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-line">Notary / Attesting Authority</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
